@@ -4,6 +4,14 @@ Turn your lecture PDFs into practice exams. Claude writes multiple choice, singl
 
 It runs on your own computer and uses your **Claude Pro or Max subscription** through Claude Code. No API key, no extra billing, and your files never leave your machine except to be read by Claude.
 
+![Recall: from lecture PDF to a graded practice exam](docs/images/demo.gif)
+
+| Take the exam | Get graded with feedback |
+| --- | --- |
+| ![Quiz view with a question navigator](docs/images/quiz.png) | ![Results with score breakdown and topics to review](docs/images/results.png) |
+| **Choose what to generate** | **Claude marks written answers against a rubric** |
+| ![New question set form](docs/images/generate.png) | ![Claude's feedback on a long answer, with covered and missed points](docs/images/feedback.png) |
+
 ## Features
 
 - **Five question types:** multiple choice, single choice, fill in the blanks, long answer, and code/artifact questions (explain, trace or debug a snippet from the lecture).
