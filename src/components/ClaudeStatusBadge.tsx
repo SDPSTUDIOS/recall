@@ -13,14 +13,16 @@ export function ClaudeStatusBadge() {
     : ok
       ? `Claude ${status.subscriptionType ? capitalize(status.subscriptionType) : "connected"}`
       : status.installed
-        ? "Sign in to Claude"
+        ? "Claude not signed in"
         : "Set up Claude";
 
   const title = !status
     ? undefined
     : ok
       ? `Connected through Claude Code${status.email ? ` as ${status.email}` : ""}`
-      : "Claude Code isn't ready yet. Click for setup steps.";
+      : status.installed
+        ? "Claude Code isn't signed in. Click to see how to sign in from a terminal."
+        : "Claude Code isn't ready yet. Click for setup steps.";
 
   return (
     <Link
