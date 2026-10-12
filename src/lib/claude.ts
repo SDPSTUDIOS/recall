@@ -1,5 +1,8 @@
 import "server-only";
 import { spawn } from "node:child_process";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import { WORK_DIR } from "./db";
 
 /**
@@ -7,8 +10,37 @@ import { WORK_DIR } from "./db";
  * billed to whatever account `claude` is signed into (your Claude subscription).
  */
 
-const CLAUDE_BIN = process.env.CLAUDE_BIN || "claude";
 const DEFAULT_TIMEOUT_MS = 15 * 60 * 1000;
+
+/**
+ * Finds the CLI on every call rather than once at startup. The server's PATH is
+ * fixed when it starts, so if Claude Code is installed afterwards (the installer
+ * only updates PATH for new shells), we also check the usual install locations.
+ */
+function resolveClaudeBin(): string {
+  if (process.env.CLAUDE_BIN) return process.env.CLAUDE_BIN;
+  const name = process.platform === "win32" ? "claude.exe" : "claude";
+  const home = os.homedir();
+  const dirs = [
+    ...(process.env.PATH ?? "").split(path.delimiter),
+    path.join(home, ".local", "bin"),
+    path.join(home, ".claude", "local"),
+    path.dirname(process.execPath),
+    "/opt/homebrew/bin",
+    "/usr/local/bin",
+  ];
+  for (const dir of dirs) {
+    if (!dir) continue;
+    const candidate = path.join(dir, name);
+    try {
+      fs.accessSync(candidate, fs.constants.X_OK);
+      if (fs.statSync(candidate).isFile()) return candidate;
+    } catch {
+      /* not here */
+    }
+  }
+  return "claude";
+}
 
 export interface ClaudeRunOptions {
   /** Full user prompt, delivered on stdin (avoids Windows command-line limits). */
@@ -43,8 +75,9 @@ function exec(
   args: string[],
   { input, cwd, timeoutMs }: { input?: string; cwd?: string; timeoutMs: number },
 ): Promise<{ stdout: string; stderr: string; code: number | null }> {
+  const bin = resolveClaudeBin();
   return new Promise((resolve, reject) => {
-    const child = spawn(/*turbopackIgnore: true*/ CLAUDE_BIN, args, {
+    const child = spawn(/*turbopackIgnore: true*/ bin, args, {
       cwd: cwd ?? WORK_DIR,
       env: childEnv(),
       windowsHide: true,
@@ -66,7 +99,7 @@ function exec(
       reject(
         new ClaudeError(
           err.code === "ENOENT"
-            ? `Claude Code CLI not found ("${CLAUDE_BIN}"). Install Claude Code and sign in by running \`claude\` once, or set CLAUDE_BIN in .env.local to the full path of the executable.`
+            ? `Claude Code CLI not found ("${bin}"). Install Claude Code and sign in by running \`claude\` once, or set CLAUDE_BIN in .env.local to the full path of the executable.`
             : `Could not start Claude Code: ${err.message}`,
         ),
       );
