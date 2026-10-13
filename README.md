@@ -4,7 +4,9 @@ Turn your lecture PDFs into practice exams. Claude writes multiple choice, singl
 
 It runs on your own computer and uses your **Claude Pro or Max subscription** through Claude Code. No API key, no extra billing, and your files never leave your machine except to be read by Claude.
 
-![Recall: from lecture PDF to a graded practice exam](docs/images/demo.gif)
+[![Watch the Recall launch video on YouTube](https://img.youtube.com/vi/_3X7cHaQMOg/maxresdefault.jpg)](https://youtu.be/_3X7cHaQMOg)
+
+▶️ [Watch the launch video](https://youtu.be/_3X7cHaQMOg)
 
 | Take the exam | Get graded with feedback |
 | --- | --- |
