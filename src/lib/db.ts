@@ -137,6 +137,18 @@ const MIGRATIONS: ((db: Database.Database) => void)[] = [
       }
     }
   },
+  // 3: Ask Claude conversations, one per question.
+  (db) => {
+    db.exec(`
+      CREATE TABLE tutor_chats (
+        quiz_id       TEXT NOT NULL REFERENCES quizzes(id) ON DELETE CASCADE,
+        question_id   TEXT NOT NULL,
+        messages_json TEXT NOT NULL,
+        updated_at    INTEGER NOT NULL,
+        PRIMARY KEY (quiz_id, question_id)
+      );
+    `);
+  },
 ];
 
 function migrate(db: Database.Database) {

@@ -163,6 +163,15 @@ export interface AttemptRecord {
   createdAt: number;
 }
 
+/** One turn of an Ask Claude conversation about a question. */
+export interface TutorMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
+/** Saved Ask Claude conversations for a question set, by question id. */
+export type TutorChats = Record<string, TutorMessage[]>;
+
 export const MODEL_PRESETS: { value: string; label: string; hint: string }[] = [
   { value: "sonnet", label: "Sonnet (latest)", hint: "Balanced quality and speed. Good default" },
   { value: "opus", label: "Opus (latest)", hint: "Deep reasoning, best for hard material" },

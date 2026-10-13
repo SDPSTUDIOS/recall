@@ -4,7 +4,7 @@ import { io } from "next/cache";
 import { QuizRunner } from "@/components/QuizRunner";
 import { BackLink, PageLoading } from "@/components/ui";
 import { formatDate } from "@/lib/format";
-import { getAttempt, getQuiz } from "@/lib/repo";
+import { getAttempt, getQuiz, listTutorChats } from "@/lib/repo";
 
 export default function AttemptPage({ params }: PageProps<"/attempts/[id]">) {
   return (
@@ -29,7 +29,12 @@ async function AttemptView({ params }: { params: PageProps<"/attempts/[id]">["pa
           Attempt from {formatDate(attempt.createdAt)}
         </h1>
       </div>
-      <QuizRunner quizId={quiz.id} questions={quiz.questions} initialAttempt={attempt} />
+      <QuizRunner
+        quizId={quiz.id}
+        questions={quiz.questions}
+        initialAttempt={attempt}
+        initialChats={listTutorChats(quiz.id)}
+      />
     </div>
   );
 }

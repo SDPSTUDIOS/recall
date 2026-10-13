@@ -24,10 +24,12 @@ import {
   type AttemptRecord,
   type Question,
   type QuestionResult,
+  type TutorChats,
 } from "@/lib/types";
 import { useConfirm } from "./Dialog";
 import { LETTERS, QuestionCard } from "./quiz/QuestionCard";
 import { ScoreSummary } from "./quiz/ScoreSummary";
+import { TutorPanel, type ChatState } from "./quiz/TutorPanel";
 import { Button, ErrorText, Kbd, Spinner, ToggleGroup, cx } from "./ui";
 
 type Mode = "exam" | "practice";
@@ -49,10 +51,13 @@ export function QuizRunner({
   quizId,
   questions,
   initialAttempt,
+  initialChats = {},
 }: {
   quizId: string;
   questions: Question[];
   initialAttempt?: AttemptRecord;
+  /** Saved Ask Claude conversations, by question id. */
+  initialChats?: TutorChats;
 }) {
   const router = useRouter();
   const [mode, setMode] = useState<Mode>("exam");
@@ -68,6 +73,9 @@ export function QuizRunner({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<ReviewFilter>("all");
+  /** The question the Ask Claude panel is open on, if any. */
+  const [tutorId, setTutorId] = useState<string | null>(null);
+  const [chats, setChats] = useState<ChatState>(initialChats);
   const [confirm, confirmDialog] = useConfirm();
 
   // Restore the layout choice and any unsubmitted answers (per-browser conveniences).
@@ -233,7 +241,7 @@ export function QuizRunner({
       if (e.ctrlKey || e.metaKey || e.altKey || e.defaultPrevented) return;
       const t = e.target as HTMLElement;
       if (t.closest("input:not([type=radio]):not([type=checkbox]), textarea, select, [contenteditable]")) return;
-      if (document.querySelector("dialog[open]")) return;
+      if (document.querySelector("dialog[open]") || t.closest("[data-tutor-panel]")) return;
       const q = questions[current];
       if (!q) return;
 
@@ -258,6 +266,30 @@ export function QuizRunner({
     return () => window.removeEventListener("keydown", onKey);
   });
 
+  // In the one-at-a-time view the panel follows the question on screen.
+  const tutorQuestionId = tutorId && !attempt && layout === "focus" ? (questions[current]?.id ?? null) : tutorId;
+  const tutorQuestion = questions.find((x) => x.id === tutorQuestionId);
+  const askClaude = (id: string) => setTutorId(tutorQuestionId === id ? null : id);
+  const tutorPanel = (
+    <TutorPanel
+      quizId={quizId}
+      chats={chats}
+      setChats={setChats}
+      onClose={() => setTutorId(null)}
+      target={
+        tutorQuestion
+          ? {
+              question: tutorQuestion,
+              number: numbers.get(tutorQuestion.id)!,
+              answer: answers[tutorQuestion.id],
+              revealed: !!attempt || !!checked[tutorQuestion.id],
+              feedback: resultById.get(tutorQuestion.id)?.feedback,
+            }
+          : null
+      }
+    />
+  );
+
   // ---------- results ----------
   if (attempt) {
     const review = (q: Question) => resultById.get(q.id)?.status !== "correct";
@@ -267,6 +299,8 @@ export function QuizRunner({
     const reviewCount = questions.filter(review).length;
     return (
       <div className="space-y-6">
+        {/* First child in both views, so conversations survive submitting. */}
+        {tutorPanel}
         <ScoreSummary attempt={attempt} questions={questions} onRetake={retake} />
         {error && <ErrorText>{error}</ErrorText>}
 
@@ -301,6 +335,9 @@ export function QuizRunner({
                 disabled
                 result={resultById.get(q.id)}
                 reveal
+                onAskClaude={() => askClaude(q.id)}
+                askingClaude={tutorQuestionId === q.id}
+                hasChat={!!chats[q.id]?.length}
               />
             )}
           />
@@ -334,11 +371,15 @@ export function QuizRunner({
       onToggleFlag={() => toggleFlag(q.id)}
       showType={focus}
       footer={practiceFooter(q)}
+      onAskClaude={() => askClaude(q.id)}
+      askingClaude={tutorQuestionId === q.id}
+      hasChat={!!chats[q.id]?.length}
     />
   );
 
   return (
     <div className="space-y-5">
+      {tutorPanel}
       {confirmDialog}
 
       {/* Toolbar */}
@@ -405,40 +446,42 @@ export function QuizRunner({
       {error && <ErrorText>{error}</ErrorText>}
 
       {layout === "focus" && q ? (
-        <div className="grid gap-5 lg:grid-cols-[1fr_15rem] lg:items-start">
-          <div className="min-w-0 space-y-4">
-            <div key={q.id} className="animate-fade-up">
-              {card(q, true)}
-            </div>
-            <div className="flex items-center justify-between gap-3">
-              <Button variant="secondary" onClick={() => go(current - 1)} disabled={current === 0}>
-                <ArrowLeft className="size-4" /> Previous
-              </Button>
-              {current < questions.length - 1 ? (
-                <Button onClick={() => go(current + 1)}>
-                  Next <ArrowRight className="size-4" />
+        <div className="@container">
+          <div className="grid gap-5 @3xl:grid-cols-[1fr_15rem] @3xl:items-start">
+            <div className="min-w-0 space-y-4">
+              <div key={q.id} className="animate-fade-up">
+                {card(q, true)}
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <Button variant="secondary" onClick={() => go(current - 1)} disabled={current === 0}>
+                  <ArrowLeft className="size-4" /> Previous
                 </Button>
-              ) : (
-                <Button onClick={submit} disabled={submitting}>
-                  <Send className="size-4" /> Finish and submit
-                </Button>
-              )}
+                {current < questions.length - 1 ? (
+                  <Button onClick={() => go(current + 1)}>
+                    Next <ArrowRight className="size-4" />
+                  </Button>
+                ) : (
+                  <Button onClick={submit} disabled={submitting}>
+                    <Send className="size-4" /> Finish and submit
+                  </Button>
+                )}
+              </div>
+              <p className="hidden flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted sm:flex">
+                <span className="inline-flex items-center gap-1"><Kbd>←</Kbd><Kbd>→</Kbd> move</span>
+                <span className="inline-flex items-center gap-1"><Kbd>A</Kbd>–<Kbd>F</Kbd> choose option</span>
+                <span className="inline-flex items-center gap-1"><Kbd>M</Kbd> mark for review</span>
+                {mode === "practice" && <span className="inline-flex items-center gap-1"><Kbd>Enter</Kbd> check</span>}
+              </p>
             </div>
-            <p className="hidden flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted sm:flex">
-              <span className="inline-flex items-center gap-1"><Kbd>←</Kbd><Kbd>→</Kbd> move</span>
-              <span className="inline-flex items-center gap-1"><Kbd>A</Kbd>–<Kbd>F</Kbd> choose option</span>
-              <span className="inline-flex items-center gap-1"><Kbd>M</Kbd> mark for review</span>
-              {mode === "practice" && <span className="inline-flex items-center gap-1"><Kbd>Enter</Kbd> check</span>}
-            </p>
+            <Navigator
+              questions={questions}
+              current={current}
+              onSelect={go}
+              answered={answered}
+              flagged={flagged}
+              resultOf={practiceResult}
+            />
           </div>
-          <Navigator
-            questions={questions}
-            current={current}
-            onSelect={go}
-            answered={answered}
-            flagged={flagged}
-            resultOf={practiceResult}
-          />
         </div>
       ) : (
         <>
@@ -496,7 +539,7 @@ function Navigator({
   resultOf: (q: Question) => QuestionResult | undefined;
 }) {
   return (
-    <nav aria-label="Questions" className="lg:sticky lg:top-22">
+    <nav aria-label="Questions" className="@3xl:sticky @3xl:top-22">
       <div className="rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900">
         <div className="mb-2 text-xs font-medium text-muted">Questions</div>
         <div className="grid grid-cols-[repeat(auto-fill,minmax(2.25rem,1fr))] gap-1.5">

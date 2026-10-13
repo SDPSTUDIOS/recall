@@ -73,7 +73,21 @@ function childEnv() {
 
 function exec(
   args: string[],
-  { input, cwd, timeoutMs }: { input?: string; cwd?: string; timeoutMs: number },
+  {
+    input,
+    cwd,
+    timeoutMs,
+    onStdout,
+    signal,
+  }: {
+    input?: string;
+    cwd?: string;
+    timeoutMs: number;
+    /** Called with each chunk of stdout as it arrives. */
+    onStdout?: (chunk: string) => void;
+    /** Kills the process, e.g. when the browser that asked for it goes away. */
+    signal?: AbortSignal;
+  },
 ): Promise<{ stdout: string; stderr: string; code: number | null }> {
   const bin = resolveClaudeBin();
   return new Promise((resolve, reject) => {
@@ -91,7 +105,13 @@ function exec(
       child.kill();
     }, timeoutMs);
 
-    child.stdout.setEncoding("utf8").on("data", (d) => (stdout += d));
+    child.stdout.setEncoding("utf8").on("data", (d: string) => {
+      stdout += d;
+      onStdout?.(d);
+    });
+    const abort = () => child.kill();
+    if (signal?.aborted) abort();
+    signal?.addEventListener("abort", abort, { once: true });
     child.stderr.setEncoding("utf8").on("data", (d) => (stderr += d));
 
     child.on("error", (err: NodeJS.ErrnoException) => {
@@ -107,6 +127,7 @@ function exec(
 
     child.on("close", (code) => {
       clearTimeout(timer);
+      signal?.removeEventListener("abort", abort);
       if (timedOut) {
         reject(new ClaudeError(`Claude took longer than ${Math.round(timeoutMs / 60000)} minutes and was stopped.`));
       } else {
@@ -185,6 +206,85 @@ export async function runClaude<T>(opts: ClaudeRunOptions): Promise<ClaudeRunRes
     modelUsed: Object.keys(parsed.modelUsage ?? {})[0] ?? null,
     durationMs: Date.now() - started,
   };
+}
+
+export interface ClaudeStreamOptions {
+  input: string;
+  systemPrompt: string;
+  model: string;
+  effort?: string;
+  timeoutMs?: number;
+  signal?: AbortSignal;
+  /** Called with each piece of reply text as Claude writes it. */
+  onText: (text: string) => void;
+}
+
+/** Plain-text reply with no tools, streamed as it's written. Resolves once Claude has finished. */
+export async function streamClaude(opts: ClaudeStreamOptions): Promise<void> {
+  const args = [
+    "-p", "--tools", "",
+    "--permission-mode", "dontAsk",
+    "--output-format", "stream-json",
+    "--include-partial-messages",
+    "--verbose",
+    "--model", opts.model,
+    "--system-prompt", opts.systemPrompt,
+    "--no-session-persistence",
+    "--safe-mode",
+    "--strict-mcp-config",
+  ];
+  if (opts.effort && opts.effort !== "default") args.push("--effort", opts.effort);
+
+  // stream-json is one JSON object per line; a chunk can end mid-line.
+  let pending = "";
+  let result: { is_error?: boolean; subtype?: string; result?: string } | null = null;
+  const onLine = (line: string) => {
+    if (!line.trim()) return;
+    let msg: {
+      type?: string;
+      event?: { type?: string; delta?: { type?: string; text?: string } };
+      is_error?: boolean;
+      subtype?: string;
+      result?: string;
+    };
+    try {
+      msg = JSON.parse(line);
+    } catch {
+      return;
+    }
+    const delta = msg.event?.delta;
+    if (msg.type === "stream_event" && msg.event?.type === "content_block_delta" && delta?.type === "text_delta" && delta.text) {
+      opts.onText(delta.text);
+    } else if (msg.type === "result") {
+      result = msg;
+    }
+  };
+
+  const { stdout, stderr, code } = await exec(args, {
+    input: opts.input,
+    timeoutMs: opts.timeoutMs ?? 5 * 60 * 1000,
+    signal: opts.signal,
+    onStdout: (chunk) => {
+      pending += chunk;
+      const lines = pending.split("\n");
+      pending = lines.pop() ?? "";
+      lines.forEach(onLine);
+    },
+  });
+  onLine(pending);
+  if (opts.signal?.aborted) return;
+
+  const r = result as { is_error?: boolean; subtype?: string; result?: string } | null;
+  if (!r) {
+    const detail = (stderr || stdout).trim().slice(0, 800);
+    throw new ClaudeError(
+      `Claude Code exited${code !== null ? ` with code ${code}` : ""} without a result.${detail ? ` ${detail}` : ""}`,
+    );
+  }
+  if (r.is_error || r.subtype !== "success") {
+    const msg = r.result?.trim() || r.subtype || "unknown error";
+    throw new ClaudeError(`Claude returned an error: ${msg.slice(0, 800)}`);
+  }
 }
 
 export interface ClaudeStatus {

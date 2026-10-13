@@ -10,7 +10,7 @@ import { QuizRunner } from "@/components/QuizRunner";
 import { RetryButton } from "@/components/RetryButton";
 import { BackLink, Badge, Card, PageLoading, cx, scoreTone } from "@/components/ui";
 import { formatDate, formatDuration, formatRelative, pct } from "@/lib/format";
-import { getQuiz, listAttempts } from "@/lib/repo";
+import { getQuiz, listAttempts, listTutorChats } from "@/lib/repo";
 import type { AttemptRecord } from "@/lib/types";
 
 export default function QuizPage({ params }: PageProps<"/quizzes/[id]">) {
@@ -121,7 +121,7 @@ async function QuizView({ params }: { params: PageProps<"/quizzes/[id]">["params
       {quiz.status === "ready" && (
         <>
           {attempts.length > 0 && <AttemptHistory attempts={attempts} />}
-          <QuizRunner quizId={quiz.id} questions={quiz.questions} />
+          <QuizRunner quizId={quiz.id} questions={quiz.questions} initialChats={listTutorChats(quiz.id)} />
         </>
       )}
     </div>

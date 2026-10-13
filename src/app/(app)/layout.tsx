@@ -50,7 +50,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         </div>
       </aside>
 
-      <div className="flex min-h-full flex-1 flex-col lg:pl-60">
+      <div className="app-shell flex min-h-full flex-1 flex-col lg:pl-60">
         <header className="sticky top-0 z-30 border-b border-zinc-200/80 bg-white/75 backdrop-blur-md backdrop-saturate-150 lg:hidden dark:border-zinc-800/80 dark:bg-zinc-950/75">
           <div className="mx-auto flex h-14 max-w-5xl items-center gap-3 px-4">
             <HomeLink className="[&>span]:hidden sm:[&>span]:inline" />
