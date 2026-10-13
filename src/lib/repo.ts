@@ -7,6 +7,8 @@ import type {
   Question,
   QuizRecord,
   QuizStatus,
+  TutorChats,
+  TutorMessage,
 } from "./types";
 
 interface DocumentRow {
@@ -275,4 +277,24 @@ export function insertAttempt(a: AttemptRecord) {
     a.maxScore,
     a.createdAt,
   );
+}
+
+// ---------- Ask Claude conversations ----------
+
+export function listTutorChats(quizId: string): TutorChats {
+  const rows = db
+    .prepare("SELECT question_id, messages_json FROM tutor_chats WHERE quiz_id = ?")
+    .all(quizId) as { question_id: string; messages_json: string }[];
+  return Object.fromEntries(rows.map((r) => [r.question_id, JSON.parse(r.messages_json)]));
+}
+
+export function saveTutorChat(quizId: string, questionId: string, messages: TutorMessage[]) {
+  db.prepare(
+    `INSERT INTO tutor_chats (quiz_id, question_id, messages_json, updated_at) VALUES (?, ?, ?, ?)
+     ON CONFLICT (quiz_id, question_id) DO UPDATE SET messages_json = excluded.messages_json, updated_at = excluded.updated_at`,
+  ).run(quizId, questionId, JSON.stringify(messages), Date.now());
+}
+
+export function deleteTutorChat(quizId: string, questionId: string) {
+  db.prepare("DELETE FROM tutor_chats WHERE quiz_id = ? AND question_id = ?").run(quizId, questionId);
 }

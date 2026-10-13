@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, CheckCircle2, CircleDashed, Flag, X, XCircle } from "lucide-react";
+import { Check, CheckCircle2, CircleDashed, Flag, MessageCircleQuestion, X, XCircle } from "lucide-react";
 import {
   BLANK_TOKEN,
   TYPE_LABEL,
@@ -46,6 +46,9 @@ export function QuestionCard({
   onToggleFlag,
   showType = false,
   footer,
+  onAskClaude,
+  askingClaude,
+  hasChat,
 }: {
   number: number;
   total?: number;
@@ -60,6 +63,12 @@ export function QuestionCard({
   /** Show the question type (when questions aren't grouped under type headings). */
   showType?: boolean;
   footer?: React.ReactNode;
+  /** Opens the Ask Claude panel for this question. */
+  onAskClaude?: () => void;
+  /** The Ask Claude panel is open on this question. */
+  askingClaude?: boolean;
+  /** There's a saved conversation about this question. */
+  hasChat?: boolean;
 }) {
   return (
     <Card
@@ -85,6 +94,29 @@ export function QuestionCard({
         {q.topic && <Badge tone="brand" className="max-w-56 truncate">{q.topic}</Badge>}
         <span className="flex-1" />
         {result && <StatusBadge result={result} />}
+        {onAskClaude && (
+          <button
+            type="button"
+            onClick={onAskClaude}
+            aria-pressed={askingClaude}
+            title={hasChat ? "Continue your conversation with Claude" : "Talk this question through with Claude"}
+            className={cx(
+              "inline-flex min-h-7 items-center gap-1 rounded-full px-2.5 py-1 font-medium transition-colors pointer-coarse:min-h-9",
+              askingClaude
+                ? "bg-brand-100 text-brand-800 dark:bg-brand-950 dark:text-brand-200"
+                : "text-brand-700 hover:bg-brand-50 dark:text-brand-300 dark:hover:bg-brand-950/60",
+            )}
+          >
+            <MessageCircleQuestion className="size-3.5" aria-hidden />
+            Ask Claude
+            {hasChat && (
+              <>
+                <span className="size-1.5 rounded-full bg-brand-500" aria-hidden />
+                <span className="sr-only">(conversation saved)</span>
+              </>
+            )}
+          </button>
+        )}
         {onToggleFlag && !result && (
           <button
             type="button"
