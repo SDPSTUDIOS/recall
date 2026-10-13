@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useClaudeStatus } from "./useClaudeStatus";
 import { cx } from "./ui";
 
-export function ClaudeStatusBadge() {
+export function ClaudeStatusBadge({ className }: { className?: string }) {
   const { status } = useClaudeStatus();
   const ok = status?.loggedIn;
 
@@ -30,6 +30,7 @@ export function ClaudeStatusBadge() {
       title={title}
       className={cx(
         "inline-flex shrink-0 items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+        className,
         !status && "border-zinc-200 text-muted dark:border-zinc-800",
         status && ok && "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:border-emerald-900 dark:bg-emerald-950/60 dark:text-emerald-300 dark:hover:bg-emerald-950",
         status && !ok && "border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100 dark:border-amber-900 dark:bg-amber-950/60 dark:text-amber-300 dark:hover:bg-amber-950",

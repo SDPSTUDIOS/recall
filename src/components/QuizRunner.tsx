@@ -270,7 +270,7 @@ export function QuizRunner({
         <ScoreSummary attempt={attempt} questions={questions} onRetake={retake} />
         {error && <ErrorText>{error}</ErrorText>}
 
-        <div className="sticky top-14 z-10 -mx-4 flex flex-wrap items-center gap-2 border-b border-zinc-200 bg-[var(--background)]/90 px-4 py-2.5 backdrop-blur dark:border-zinc-800">
+        <div className="sticky top-14 z-10 -mx-4 flex flex-wrap items-center gap-2 border-b border-zinc-200 bg-[var(--background)]/90 px-4 py-2.5 lg:top-0 lg:-mx-8 lg:px-8 backdrop-blur dark:border-zinc-800">
           <span className="mr-1 text-sm font-medium">Review</span>
           <ToggleGroup
             label="Filter questions"
@@ -342,7 +342,7 @@ export function QuizRunner({
       {confirmDialog}
 
       {/* Toolbar */}
-      <div className="sticky top-14 z-10 -mx-4 border-b border-zinc-200 bg-[var(--background)]/90 px-4 py-2.5 backdrop-blur dark:border-zinc-800">
+      <div className="sticky top-14 z-10 -mx-4 border-b border-zinc-200 bg-[var(--background)]/90 px-4 py-2.5 lg:top-0 lg:-mx-8 lg:px-8 backdrop-blur dark:border-zinc-800">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
           <ToggleGroup
             label="Mode"
@@ -496,7 +496,7 @@ function Navigator({
   resultOf: (q: Question) => QuestionResult | undefined;
 }) {
   return (
-    <nav aria-label="Questions" className="lg:sticky lg:top-36">
+    <nav aria-label="Questions" className="lg:sticky lg:top-22">
       <div className="rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900">
         <div className="mb-2 text-xs font-medium text-muted">Questions</div>
         <div className="grid grid-cols-[repeat(auto-fill,minmax(2.25rem,1fr))] gap-1.5">
