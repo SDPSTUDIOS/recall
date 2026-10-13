@@ -4,6 +4,7 @@ import { io } from "next/cache";
 import { FileText, Layers, ListChecks, Sparkles, Target, Upload } from "lucide-react";
 import { QuizList } from "@/components/QuizList";
 import { SetupBanner } from "@/components/SetupBanner";
+import { UpdateBanner } from "@/components/UpdateBanner";
 import { UploadDropzone } from "@/components/UploadDropzone";
 import { Badge, Card, PageLoading, SectionTitle, buttonClass } from "@/components/ui";
 import { formatRelative, isLowText } from "@/lib/format";
@@ -13,6 +14,7 @@ export default function Home() {
   return (
     <div className="space-y-10">
       <SetupBanner />
+      <UpdateBanner />
       <section className="space-y-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">

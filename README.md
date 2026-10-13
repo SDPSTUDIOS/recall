@@ -29,13 +29,47 @@ It runs on your own computer and uses your **Claude Pro or Max subscription** th
 - **Text or Visual reading:** Visual mode lets Claude look at the pages themselves, for scanned slides, diagrams, graphs and equations shown as images.
 - Light and dark themes, renameable materials and sets, and attempt history with score trends.
 
-## Quick start
+## Install
+
+You need a **Claude Pro or Max plan**. Nothing else: the installer sets up everything,
+including Claude Code, without admin rights.
+
+**Mac:** open **Terminal** (press `⌘ Space`, type *Terminal*, press Enter), paste this and press Enter:
+
+```bash
+curl -fsSL https://github.com/SDPSTUDIOS/recall/releases/latest/download/install.sh | bash
+```
+
+**Windows:** open **PowerShell** (Start menu, type *PowerShell*, press Enter), paste this and press Enter:
+
+```powershell
+irm https://github.com/SDPSTUDIOS/recall/releases/latest/download/install.ps1 | iex
+```
+
+Your browser opens so you can sign in to Claude, then Recall opens. After that, start it
+from the **Recall** icon on your Desktop (or in Applications / the Start menu).
+
+- **Updates are automatic.** When you open Recall it checks for a new version and installs
+  it first. If Recall is already open, the home page offers an **Update now** button. Your
+  PDFs, question sets and results are kept, and the database is backed up before any change.
+- **Something not working?** Run the same command again. It repairs the install and keeps your data.
+- **Where things live:** `~/.recall` on Mac and Linux, `%LOCALAPPDATA%\Recall` on Windows,
+  with your data in its `data` folder.
+- **Uninstall:** Mac and Linux: `bash ~/.recall/uninstall.sh`. Windows (PowerShell):
+  `& "$env:LOCALAPPDATA\Recall\uninstall.ps1"`. Your data folder is kept unless you add
+  `--purge` (Windows: `-Purge`).
+
+Linux works the same way as Mac. The installer also takes `--tag v0.3.0` (Mac/Linux:
+`… | bash -s -- --tag v0.3.0`; Windows: set `$env:RECALL_TAG = 'v0.3.0'` first) to install a
+specific version, such as a pre-release.
+
+## Run from the code (developers)
 
 You need [Node.js](https://nodejs.org) 22 or newer and [Claude Code](https://claude.com/claude-code).
 
 ```bash
 # 1. Install Claude Code and sign in with your Claude account
-npm install -g @anthropic-ai/claude-code
+curl -fsSL https://claude.ai/install.sh | bash
 claude auth login
 
 # 2. Install and run Recall
@@ -46,6 +80,8 @@ npm run dev
 Open http://localhost:3000. The first time, a welcome page checks that Claude Code is installed and signed in, and shows how to fix anything missing. It only appears once; to see it again, delete `data/onboarded.json`. Setup help is always at `/setup`.
 
 There is no Recall account or sign-in. It's open source and runs entirely on your computer.
+
+Releasing a new version for students is covered in [RELEASING.md](RELEASING.md).
 
 ## Keyboard shortcuts (quiz view)
 
@@ -66,7 +102,8 @@ There is no Recall account or sign-in. It's open source and runs entirely on you
 | Artifacts | Claude takes an artifact from the material, or creates one that applies what it teaches, and asks you to work with it. Equations are LaTeX rendered with KaTeX; graphs (line, scatter or bar) are drawn from data series, with hover values and a data table; tables, case studies and code are shown as they are. |
 | Visual mode | The selected pages are split into PDFs of up to 10 pages each, and Claude reads them with its Read tool, so it also sees diagrams and scanned slides. |
 | Grading | Multiple choice, single choice and fill-in-the-blank are graded instantly in code. Long answers and code answers are sent to Claude in one batch with the model answer and marking points. |
-| Storage | Everything lives in a local SQLite database at `data/exam-helper.db`. |
+| Storage | Everything lives in a local SQLite database, `exam-helper.db` in the data folder (`data/`, or `RECALL_DATA_DIR`). It's backed up to `backups/` before schema migrations. |
+| Installed copies | The installer downloads a prebuilt release (Next.js standalone build) and a private Node runtime. A launcher starts the server on `127.0.0.1:3737`, checks the release's `manifest.json` for updates on each start, and rolls back if a new version doesn't start. See `installer/`. |
 
 ## Configuration
 

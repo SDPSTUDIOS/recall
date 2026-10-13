@@ -26,9 +26,10 @@ export default function SetupPage() {
             limits, like using Claude Code yourself. Haiku and Text mode use the least.
           </Faq>
           <Faq q="Where are my files stored?">
-            Everything stays on this computer: PDFs in <Code>data/uploads</Code> and your library,
-            question sets and attempts in <Code>data/exam-helper.db</Code>. The lecture text is sent
-            to Claude only to write and grade questions.
+            Everything stays on this computer, in Recall&apos;s data folder: <Code>~/.recall/data</Code>{" "}
+            on a Mac or Linux, <Code>%LOCALAPPDATA%\Recall\data</Code> on Windows, or <Code>data/</Code> if
+            you run it from the code. Updates never touch it. The lecture text is sent to Claude only
+            to write and grade questions.
           </Faq>
           <Faq q="Which model should I pick?">
             Sonnet is a good default. Opus is best for hard or technical material, and Haiku is the
@@ -39,7 +40,8 @@ export default function SetupPage() {
             the important content is in diagrams, charts or screenshots of code.
           </Faq>
           <Faq q="Claude Code is installed but not found">
-            The app runs <Code>claude</Code> from the PATH it was started with. Restart{" "}
+            If you installed Recall with the install command, run that command again: it checks
+            Claude Code and repairs anything missing. If you run it from the code, restart{" "}
             <Code>npm run dev</Code> from a new terminal, or point to the executable in{" "}
             <Code>.env.local</Code>:
             <span className="mt-2 block">

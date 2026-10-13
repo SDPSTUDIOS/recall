@@ -1,0 +1,113 @@
+name: Release
+
+# Publishing a release on GitHub (Releases → Draft a new release → Publish) builds
+# Recall for each platform and attaches the bundles plus manifest.json, which the
+# installer and the launcher's auto-update read from the latest release.
+#
+# The version comes from the release tag (v0.3.0 → 0.3.0), so the build is always
+# labelled correctly even if package.json wasn't bumped. Pre-releases are built
+# too but aren't "latest", so students don't get them: use one to test a release.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing release tag to (re)build and attach bundles to, e.g. v0.2.0
+        required: true
+
+permissions:
+  contents: write
+
+env:
+  TAG: ${{ github.event.release.tag_name || inputs.tag }}
+
+concurrency:
+  group: release-${{ github.event.release.tag_name || inputs.tag }}
+
+jobs:
+  build:
+    name: Build (${{ matrix.target }})
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - { os: macos-latest, target: darwin-arm64 }
+          - { os: macos-15-intel, target: darwin-x64 }
+          - { os: windows-latest, target: win32-x64 }
+          - { os: ubuntu-latest, target: linux-x64 }
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ env.TAG }}
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .node-version
+          cache: npm
+
+      - name: Set version from tag
+        run: npm version "${TAG#v}" --no-git-tag-version --allow-same-version
+
+      - run: npm ci
+      - run: npm run build
+      - run: npm run package
+
+      - name: Smoke test the bundle
+        run: |
+          mkdir smoke
+          tar -xzf dist/recall-*.tar.gz -C smoke
+          PORT=3999 HOSTNAME=127.0.0.1 node smoke/server.js > smoke.log 2>&1 &
+          for i in $(seq 60); do
+            if body=$(curl -sf http://127.0.0.1:3999/api/health); then
+              echo "$body"
+              echo "$body" | grep -q "\"version\":\"${TAG#v}\"" && exit 0
+              echo "::error::Health check returned the wrong version"; exit 1
+            fi
+            sleep 1
+          done
+          cat smoke.log
+          echo "::error::Bundle didn't start"; exit 1
+
+      - uses: actions/upload-artifact@v5
+        with:
+          name: bundle-${{ matrix.target }}
+          path: |
+            dist/*.tar.gz
+            dist/*.json
+          if-no-files-found: error
+
+  publish:
+    name: Attach to release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ env.TAG }}
+
+      - uses: actions/download-artifact@v5
+        with:
+          pattern: bundle-*
+          merge-multiple: true
+          path: dist
+
+      - name: Write manifest.json
+        run: node scripts/manifest.mjs dist "$TAG"
+
+      - name: Upload assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          shopt -s nullglob
+          extra=(installer/install.sh installer/install.ps1 installer/launcher.mjs)
+          existing=()
+          for f in "${extra[@]}"; do [ -f "$f" ] && existing+=("$f"); done
+          gh release upload "$TAG" dist/*.tar.gz "${existing[@]}" --clobber
+          # Last, so the manifest never points at bundles that aren't uploaded yet.
+          gh release upload "$TAG" dist/manifest.json --clobber

@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // A self-contained server (server.js + traced node_modules) that the release bundles ship.
+  output: "standalone",
   cacheComponents: true,
   partialPrefetching: true,
   // Native SQLite driver and pdf.js run as plain Node modules on the server.

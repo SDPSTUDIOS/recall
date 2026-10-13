@@ -2,12 +2,16 @@ import "server-only";
 import Database from "better-sqlite3";
 import fs from "node:fs";
 import path from "node:path";
+import { DATA_DIR } from "./paths";
 import { shuffleOptions } from "./shuffle";
 import type { Answers, Question } from "./types";
 
-export const DATA_DIR = path.join(process.cwd(), "data");
+export { DATA_DIR };
 export const UPLOAD_DIR = path.join(DATA_DIR, "uploads");
 export const WORK_DIR = path.join(DATA_DIR, "claude-workdir");
+const DB_FILE = path.join(DATA_DIR, "exam-helper.db");
+const BACKUP_DIR = path.join(DATA_DIR, "backups");
+const BACKUPS_KEPT = 5;
 
 declare global {
   var __examHelperDb: Database.Database | undefined;
@@ -18,7 +22,7 @@ function open() {
     fs.mkdirSync(dir, { recursive: true });
   }
 
-  const db = new Database(path.join(DATA_DIR, "exam-helper.db"));
+  const db = new Database(DB_FILE);
   db.pragma("journal_mode = WAL");
   db.pragma("foreign_keys = ON");
 
@@ -151,9 +155,32 @@ const MIGRATIONS: ((db: Database.Database) => void)[] = [
   },
 ];
 
+/**
+ * Copies the database before migrating it, so a bad migration in an update can be
+ * undone by hand. A brand-new database has nothing to lose and isn't copied.
+ */
+function backup(db: Database.Database, version: number) {
+  const hasData = db.prepare("SELECT EXISTS (SELECT 1 FROM documents) AS any").get() as { any: number };
+  if (!hasData.any) return;
+
+  fs.mkdirSync(BACKUP_DIR, { recursive: true });
+  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const file = path.join(BACKUP_DIR, `exam-helper-v${version}-${stamp}.db`);
+  // VACUUM INTO writes a consistent copy, including anything still in the WAL.
+  db.prepare("VACUUM INTO ?").run(file);
+
+  const old = fs
+    .readdirSync(BACKUP_DIR)
+    .filter((f) => /^exam-helper-v\d+-.*\.db$/.test(f))
+    .sort((a, b) => fs.statSync(path.join(BACKUP_DIR, b)).mtimeMs - fs.statSync(path.join(BACKUP_DIR, a)).mtimeMs)
+    .slice(BACKUPS_KEPT);
+  for (const f of old) fs.rmSync(path.join(BACKUP_DIR, f), { force: true });
+}
+
 function migrate(db: Database.Database) {
   const version = db.pragma("user_version", { simple: true }) as number;
   if (version >= MIGRATIONS.length) return;
+  backup(db, version);
 
   // Rebuilding a table must not fire ON DELETE CASCADE, which would wipe attempts.
   // foreign_keys can only be toggled outside a transaction.

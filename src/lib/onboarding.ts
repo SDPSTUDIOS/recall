@@ -1,12 +1,13 @@
 import fs from "node:fs";
 import path from "node:path";
+import { DATA_DIR } from "./paths";
 
 /**
  * Whether the first-run welcome has been completed, kept as a marker file next
  * to the database so it is per install rather than per browser. Deliberately
  * free of db.ts so the proxy can check it without opening SQLite.
  */
-const MARKER = path.join(process.cwd(), "data", "onboarded.json");
+const MARKER = path.join(DATA_DIR, "onboarded.json");
 
 let done = false;
 
