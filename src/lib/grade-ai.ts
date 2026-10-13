@@ -1,5 +1,6 @@
 import "server-only";
 import { runClaude } from "./claude";
+import { MATH_RULE } from "./notation";
 import type { Question, QuestionResult } from "./types";
 
 const gradeSchema = {
@@ -25,7 +26,7 @@ const gradeSchema = {
   required: ["grades"],
 };
 
-const SYSTEM_PROMPT = `You are a fair, consistent university examiner marking written exam answers against a marking scheme. Award marks for each key point the student genuinely demonstrates, even when worded differently from the model answer. Do not award marks for vague, irrelevant or incorrect statements. Scores may use half marks and must be between 0 and the question's marks. Feedback is 2-4 sentences addressed to the student: what was good, what was missing or wrong, and how to improve. "coveredPoints" and "missedPoints" quote or paraphrase the relevant key points. Some questions include an "artifact" (code or similar) the student had to explain, trace or fix; check the student's claims about it for technical accuracy against the artifact itself. Plain text only.`;
+const SYSTEM_PROMPT = `You are a fair, consistent university examiner marking written exam answers against a marking scheme. Award marks for each key point the student genuinely demonstrates, even when worded differently from the model answer. Do not award marks for vague, irrelevant or incorrect statements. Scores may use half marks and must be between 0 and the question's marks. Feedback is 2-4 sentences addressed to the student: what was good, what was missing or wrong, and how to improve. "coveredPoints" and "missedPoints" quote or paraphrase the relevant key points. Some questions include an "artifact" the student had to work with: code, equations in LaTeX, a chart given as data series, a data table, or a case study. Check the student's claims, readings and calculations against the artifact itself. Students type maths on a keyboard (e.g. x^2, sqrt(x), 3.2e-4), so accept any equivalent form, equivalent rearrangements, and sensible rounding; give method marks for correct working even when the final answer is wrong. Plain text only. ${MATH_RULE}`;
 
 /** Grades long and artifact answers in one Claude call. */
 export async function gradeLongAnswers(

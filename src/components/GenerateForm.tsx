@@ -27,10 +27,10 @@ type Prefs = {
 
 const PRESETS: { name: string; hint: string; counts: Counts }[] = [
   { name: "Quick check", hint: "10 short questions", counts: { mcq: 3, single: 5, fill_blank: 2, long_answer: 0, artifact: 0 } },
-  // Off by default: not every course has code or similar artifacts to work with.
-  { name: "Balanced", hint: "Every objective type plus 2 written", counts: { mcq: 5, single: 5, fill_blank: 5, long_answer: 2, artifact: 0 } },
-  { name: "Full exam", hint: "35 questions, exam length", counts: { mcq: 10, single: 10, fill_blank: 10, long_answer: 5, artifact: 0 } },
-  { name: "Written & code", hint: "Explain, trace and debug", counts: { mcq: 0, single: 0, fill_blank: 0, long_answer: 3, artifact: 4 } },
+  // Artifacts suit every field (equations, graphs, data, cases or code), so the larger presets include them.
+  { name: "Balanced", hint: "Every question type", counts: { mcq: 5, single: 5, fill_blank: 5, long_answer: 2, artifact: 2 } },
+  { name: "Full exam", hint: "35 questions, exam length", counts: { mcq: 10, single: 10, fill_blank: 10, long_answer: 3, artifact: 2 } },
+  { name: "Written & applied", hint: "Equations, graphs, cases and code", counts: { mcq: 0, single: 0, fill_blank: 0, long_answer: 3, artifact: 4 } },
 ];
 
 const DEFAULT_PREFS: Prefs = {

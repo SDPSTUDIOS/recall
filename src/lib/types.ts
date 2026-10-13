@@ -27,8 +27,8 @@ export const QUESTION_TYPES: {
   },
   {
     type: "artifact",
-    label: "Code & artifacts",
-    description: "Explain, trace or debug code or another artifact from the material",
+    label: "Artifacts",
+    description: "Work with an equation, graph, data table, case study or code from the material",
   },
 ];
 
@@ -43,6 +43,32 @@ export const BLANK_TOKEN = "[[BLANK]]";
 
 export type Difficulty = "easy" | "medium" | "hard";
 
+export const ARTIFACT_KINDS = ["code", "math", "chart", "table", "text"] as const;
+export type ArtifactKind = (typeof ARTIFACT_KINDS)[number];
+
+export interface ChartSpec {
+  type: "line" | "scatter" | "bar";
+  xLabel: string;
+  yLabel: string;
+  /** Bar charts: one label per bar group. Unused by line and scatter charts. */
+  categories: string[];
+  /** Line and scatter: `x` and `y` pair up. Bar: `y` lines up with `categories`. */
+  series: { name: string; x: number[]; y: number[] }[];
+}
+
+/** The thing an "artifact" question asks the student to work with. */
+export interface Artifact {
+  /** Absent in sets made before artifacts had kinds; those are all code. */
+  kind?: ArtifactKind;
+  title?: string;
+  /** Code: the language. Other kinds leave it empty. */
+  language: string;
+  /** Code, LaTeX equations (one per line) or a passage of text. Empty for charts and tables. */
+  content: string;
+  table?: { columns: string[]; rows: string[][] };
+  chart?: ChartSpec;
+}
+
 export interface Question {
   id: string;
   type: QuestionType;
@@ -50,8 +76,8 @@ export interface Question {
   options: string[];
   correctOptions: number[];
   blanks: { answers: string[] }[];
-  /** The code or other artifact an "artifact" question is about (absent in older sets). */
-  artifact?: { language: string; content: string };
+  /** What an "artifact" question is about: code, equations, a graph, a table or a case. */
+  artifact?: Artifact;
   modelAnswer: string;
   keyPoints: string[];
   marks: number;

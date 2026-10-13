@@ -11,6 +11,12 @@
   --foreground: #18181b;
   --muted: #5f5f6b;
   --subtle: #71717a;
+  /* Chart series, validated as a set for colour-blind separation on the card
+     surface in each theme. The light aqua is under 3:1, so charts always ship
+     a legend, tooltips and a data table. */
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
   color-scheme: light;
 }
 
@@ -19,6 +25,9 @@
   --foreground: #e4e4e7;
   --muted: #a1a1aa;
   --subtle: #8b8b95;
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --series-3: #199e70;
   color-scheme: dark;
 }
 
@@ -29,6 +38,9 @@
     --foreground: #e4e4e7;
     --muted: #a1a1aa;
     --subtle: #8b8b95;
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --series-3: #199e70;
     color-scheme: dark;
   }
 }

@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "better-sqlite3": "^12.11.1",
+    "katex": "^0.16.22",
     "lucide-react": "^1.54.0",
     "next": "16.4.0",
     "pdf-lib": "^1.17.1",

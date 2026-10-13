@@ -12,9 +12,13 @@ import {
   QUESTION_TYPES,
   type Difficulty,
   type GenerationConfig,
+  ARTIFACT_KINDS,
+  type Artifact,
+  type ChartSpec,
   type Question,
   type QuestionType,
 } from "./types";
+import { MATH_RULE } from "./notation";
 
 /** ~150k tokens of lecture text; beyond this, ask for a page range. */
 export const MAX_TEXT_CHARS = 600_000;
@@ -41,8 +45,46 @@ const questionSchema = {
     artifact: {
       type: "object",
       additionalProperties: false,
-      properties: { language: { type: "string" }, content: { type: "string" } },
-      required: ["language", "content"],
+      properties: {
+        kind: { type: "string", enum: ["none", ...ARTIFACT_KINDS] },
+        title: { type: "string" },
+        language: { type: "string" },
+        content: { type: "string" },
+        table: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            columns: { type: "array", items: { type: "string" } },
+            rows: { type: "array", items: { type: "array", items: { type: "string" } } },
+          },
+          required: ["columns", "rows"],
+        },
+        chart: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            type: { type: "string", enum: ["line", "scatter", "bar"] },
+            xLabel: { type: "string" },
+            yLabel: { type: "string" },
+            categories: { type: "array", items: { type: "string" } },
+            series: {
+              type: "array",
+              items: {
+                type: "object",
+                additionalProperties: false,
+                properties: {
+                  name: { type: "string" },
+                  x: { type: "array", items: { type: "number" } },
+                  y: { type: "array", items: { type: "number" } },
+                },
+                required: ["name", "x", "y"],
+              },
+            },
+          },
+          required: ["type", "xLabel", "yLabel", "categories", "series"],
+        },
+      },
+      required: ["kind", "title", "language", "content", "table", "chart"],
     },
     modelAnswer: { type: "string" },
     keyPoints: { type: "array", items: { type: "string" } },
@@ -65,14 +107,20 @@ const generationSchema = {
   required: ["questions"],
 };
 
-const SYSTEM_PROMPT = `You are an experienced university examiner. You write exam questions that test real understanding of the lecture material a student gives you: concepts, reasoning, definitions, processes, comparisons, and application. Ground every question and answer strictly in the provided material; do not introduce facts the material does not support. Avoid trivia about slide layout, lecturer names, course codes, or page numbers. Write in clear plain text (no Markdown). Return the questions only through the structured output.`;
+const SYSTEM_PROMPT = `You are an experienced university examiner in whatever field the material comes from, whether that is mathematics, engineering, nursing, science, business, law, the humanities or computing. You write exam questions that test real understanding of the lecture material a student gives you: concepts, reasoning, definitions, processes, calculations, comparisons, and application. Ground every question and answer strictly in the provided material; do not introduce facts the material does not support. Avoid trivia about slide layout, lecturer names, course codes, or page numbers. Write in clear plain text (no Markdown). ${MATH_RULE} Return the questions only through the structured output.`;
 
 const TYPE_RULES: Record<QuestionType, string> = {
   mcq: `"mcq" (multiple choice, select all that apply): 4-6 options in "options"; 2 or more correct, given as zero-based indices in "correctOptions". Distractors must be plausible and drawn from related concepts in the material. Do not use "all of the above"/"none of the above". Options are shuffled before display, so never refer to another option by letter or position (e.g. "both A and B"). marks: 2.`,
   single: `"single" (single answer, radio buttons): usually 4 options, exactly one correct index in "correctOptions". Options are shuffled before display, so never refer to another option by letter or position. Occasionally a True/False statement with options ["True", "False"]. marks: 1.`,
-  fill_blank: `"fill_blank": a sentence or short passage from the material's ideas with 1-3 key terms replaced by the exact token ${BLANK_TOKEN}. "blanks" has one entry per ${BLANK_TOKEN}, in order, each listing all reasonable accepted answers (synonyms, abbreviations, spelling variants). Each answer is 1-4 words and must be unambiguous from context. marks: 1 per blank.`,
+  fill_blank: `"fill_blank": a sentence or short passage from the material's ideas with 1-3 key terms replaced by the exact token ${BLANK_TOKEN}. "blanks" has one entry per ${BLANK_TOKEN}, in order, each listing all reasonable accepted answers (synonyms, abbreviations, spelling variants). Each answer is 1-4 words or a number and must be unambiguous from context. Accepted answers are what a student would type on a keyboard, never LaTeX (e.g. "x^2", "9.81", "sqrt(2)"). marks: 1 per blank.`,
   long_answer: `"long_answer": a question that needs a structured written answer (explain, compare, evaluate, apply to a scenario). "modelAnswer" is a full high-scoring answer. "keyPoints" lists 3-6 distinct marking points a grader should look for. marks: 4-10 matching the number and weight of key points.`,
-  artifact: `"artifact": the student is shown a concrete artifact and must work with it. "artifact.content" holds it as plain text with its original line breaks and indentation, never Markdown fences: a code snippet, pseudo-code, SQL query, algorithm, shell command, configuration file, regular expression, formula or data table. Take it from the material (verbatim or lightly trimmed) when the material has one; otherwise write a short realistic one (5-30 lines) that applies exactly what the material teaches. "artifact.language" names it (e.g. "python", "java", "sql", "pseudocode", "text"). "question" states the task without repeating the artifact. Vary the tasks: explain what it does and why, trace it and give the output or final state for a given input, find and fix a bug, analyse complexity or behaviour, or connect it to a concept from the material. "modelAnswer" is a full high-scoring answer that may refer to line numbers. "keyPoints" lists 3-6 marking points. marks: 3-8.`,
+  artifact: `"artifact": the student is shown a concrete artifact and must work with it, the way a real exam in this field would. Choose the kind that suits the material, and use different kinds across questions when the material supports them:
+  - "math": equations, formulas or a worked derivation. "artifact.content" holds LaTeX, one display equation per line, with no $ or \\[ \\] delimiters. Tasks: solve, derive, simplify, evaluate for given values, find the error in a working, or interpret what the formula means.
+  - "chart": a graph to read and interpret. Fill "artifact.chart": "type" is "line" (trends, functions, curves), "scatter" (paired measurements) or "bar" (comparing categories); "xLabel" and "yLabel" name each axis with units; at most 3 "series", each with a short "name". Line and scatter series give matching "x" and "y" number arrays; plot a function with 25-60 evenly spaced points. Bar charts list labels in "categories" and give each series a "y" with one value per category, leaving "x" empty. Use realistic values. Tasks: read off values, describe and explain a trend, compare series, estimate a gradient, area or rate, or connect the shape to a concept.
+  - "table": data to analyse, such as lab or test results, patient observations, a medication chart, financial figures or experimental measurements. Fill "artifact.table" with "columns" (headings with units) and "rows" (each row has one cell per column, at most 15 rows). Tasks: calculate, identify what is abnormal or significant, compare, or justify a decision from the data.
+  - "text": a short case study, clinical or workplace scenario, primary source excerpt, problem statement or passage (40-200 words) in "artifact.content". Tasks: apply the material to the case, prioritise actions, assess, analyse, or critique.
+  - "code" (only for programming or computing material; a worked calculation is "math"): a code snippet, pseudo-code, SQL query, algorithm, shell command, configuration file or regular expression in "artifact.content" with its original line breaks and indentation, never Markdown fences; "artifact.language" names it (e.g. "python", "sql", "pseudocode"). Tasks: explain, trace and give the output, find and fix a bug, or analyse complexity or behaviour.
+  Only "code" uses "language". "title" is a short caption (e.g. "Figure 1: Stress-strain curve for mild steel" or "Patient observations, day 2"). Take the artifact from the material (verbatim or lightly trimmed) when the material has one; otherwise create a short realistic one that applies exactly what the material teaches. "question" states the task without repeating the artifact. "modelAnswer" is a full high-scoring answer that shows any working. "keyPoints" lists 3-6 marking points. marks: 3-8.`,
 };
 
 function buildInput(
@@ -105,8 +153,7 @@ function buildInput(
     multi
       ? `- "topic": a short topic label. "source": the document and page it comes from (e.g. "${docNames[0]}, p. 12").`
       : `- "topic": a short topic label. "source": where in the material it comes from (e.g. "p. 12" or a section heading).`,
-    `- Fields that do not apply to a question type must be empty ("", [] or, for "artifact", {"language": "", "content": ""}).`,
-  ];
+    `- Fields that do not apply to a question type must be empty ("" or []). Questions that are not "artifact" set artifact.kind to "none" and leave every other artifact field empty; inside an artifact, fill only the fields its kind uses.`,  ];
 
   if (multi) {
     lines.push(
@@ -121,7 +168,7 @@ function buildInput(
   lines.push("");
   if (material.kind === "pdf") {
     lines.push(
-      "The lecture material is split into these PDF files in the current directory. Read every one of them with the Read tool (the whole file, without the \"pages\" parameter), paying attention to diagrams, charts and tables:",
+      "The lecture material is split into these PDF files in the current directory. Read every one of them with the Read tool (the whole file, without the \"pages\" parameter), paying attention to diagrams, graphs, equations and tables, which can become artifacts:",
       ...material.parts.map((p) => `- ${p.fileName}: "${p.docName}", pages ${p.from}-${p.to}`),
       "Use the original document page numbers above in \"source\". If you cannot read the files, return an empty questions array.",
     );
@@ -188,15 +235,88 @@ function sanitize(raw: Partial<Question>[]): Question[] {
     if ((type === "long_answer" || type === "artifact") && (!q.modelAnswer || q.keyPoints.length === 0)) continue;
 
     if (type === "artifact") {
-      const content = stripFences(r.artifact?.content ?? "");
-      if (!content.trim()) continue;
-      q.artifact = { language: r.artifact?.language?.trim().toLowerCase() || "text", content };
+      const artifact = sanitizeArtifact(r.artifact);
+      if (!artifact) continue;
+      q.artifact = artifact;
     }
 
     out.push(shuffleOptions(q).question);
   }
   const order = QUESTION_TYPES.map((t) => t.type);
   return out.sort((a, b) => order.indexOf(a.type) - order.indexOf(b.type));
+}
+
+const MAX_SERIES = 3;
+const MAX_POINTS = 200;
+const MAX_TABLE_ROWS = 30;
+
+/** Returns a renderable artifact of the kind Claude chose, or null if it is unusable. */
+function sanitizeArtifact(raw: Partial<Artifact> | undefined): Artifact | null {
+  if (!raw) return null;
+  const kind = raw.kind && (ARTIFACT_KINDS as readonly string[]).includes(raw.kind) ? raw.kind : "code";
+  const title = raw.title?.trim() ?? "";
+  const base = { kind, title, language: "", content: "" };
+
+  if (kind === "chart") {
+    const chart = sanitizeChart(raw.chart);
+    return chart ? { ...base, chart } : null;
+  }
+
+  if (kind === "table") {
+    const columns = (raw.table?.columns ?? []).map((c) => String(c).trim());
+    const rows = (raw.table?.rows ?? [])
+      .filter((r) => Array.isArray(r) && r.some((c) => String(c).trim()))
+      .slice(0, MAX_TABLE_ROWS)
+      .map((r) => columns.map((_, i) => String(r[i] ?? "").trim()));
+    return columns.length && rows.length ? { ...base, table: { columns, rows } } : null;
+  }
+
+  const content = stripFences(raw.content ?? "");
+  if (!content.trim()) return null;
+  if (kind === "math") {
+    // One equation per line; drop any delimiters Claude added anyway.
+    const lines = content
+      .split("\n")
+      .map((l) => l.trim().replace(/^(\$\$|\$|\\\[)/, "").replace(/(\$\$|\$|\\\])$/, "").trim())
+      .filter(Boolean);
+    return lines.length ? { ...base, content: lines.join("\n") } : null;
+  }
+  if (kind === "code") return { ...base, language: raw.language?.trim().toLowerCase() || "text", content };
+  return { ...base, content: content.trim() };
+}
+
+function sanitizeChart(raw: Partial<ChartSpec> | undefined): ChartSpec | null {
+  if (!raw || !["line", "scatter", "bar"].includes(raw.type ?? "")) return null;
+  const type = raw.type as ChartSpec["type"];
+  const categories = (raw.categories ?? []).map((c) => String(c).trim()).slice(0, 24);
+  const series: ChartSpec["series"] = [];
+
+  for (const s of (raw.series ?? []).slice(0, MAX_SERIES)) {
+    const name = String(s?.name ?? "").trim();
+    if (type === "bar") {
+      const y = (s?.y ?? []).slice(0, categories.length).map(Number);
+      if (y.length === categories.length && y.every(Number.isFinite)) series.push({ name, x: [], y });
+    } else {
+      // Keep only complete, finite points, in x order so lines draw left to right.
+      const points = (s?.x ?? [])
+        .map((x, i) => [Number(x), Number(s?.y?.[i])] as const)
+        .filter(([x, y]) => Number.isFinite(x) && Number.isFinite(y))
+        .slice(0, MAX_POINTS);
+      if (type === "line") points.sort((a, b) => a[0] - b[0]);
+      if (points.length >= 2) series.push({ name, x: points.map((p) => p[0]), y: points.map((p) => p[1]) });
+    }
+  }
+
+  if (series.length === 0 || (type === "bar" && categories.length === 0)) return null;
+  // Each series needs a name for the legend and tooltip once there is more than one.
+  if (series.length > 1) series.forEach((s, i) => (s.name ||= `Series ${i + 1}`));
+  return {
+    type,
+    xLabel: raw.xLabel?.trim() ?? "",
+    yLabel: raw.yLabel?.trim() ?? "",
+    categories: type === "bar" ? categories : [],
+    series,
+  };
 }
 
 /** Removes Markdown code fences and surrounding blank lines, keeping indentation. */

@@ -14,14 +14,17 @@ It runs on your own computer and uses your **Claude Pro or Max subscription** th
 
 ## Features
 
-- **Five question types:** multiple choice, single choice, fill in the blanks, long answer, and code/artifact questions (explain, trace or debug a snippet from the lecture).
+- **Works for any subject:** maths, engineering, nursing, science, business, law, humanities or computing. Claude writes questions the way an examiner in that field would.
+- **Five question types:** multiple choice, single choice, fill in the blanks, long answer, and artifact questions.
+- **Artifact questions:** Claude shows you something to work with, chosen to suit the material: equations to solve or derive, a graph to read and interpret, a data table (lab results, patient observations, financial figures), a case study or clinical scenario, or code to explain, trace or debug.
+- **Proper maths:** equations are typeset everywhere (questions, options, answers and feedback). Type maths on a keyboard (`x^2`, `sqrt(2)`, `3.2e-4`) and Claude accepts any equivalent form, with method marks for correct working.
 - **Combine lectures:** build one exam from several PDFs. Claude spreads the questions across them and cites the document and page for each.
 - **Exam or practice mode:** answer everything and submit, or check each answer as you go.
 - **Focused quiz view:** one question at a time, with a question navigator, mark-for-review, a timer and keyboard shortcuts. A single-page view is also available.
 - **Autosave:** unsubmitted answers are kept in your browser, so a refresh or closed tab doesn't lose work.
 - **Grading and feedback:** objective questions are marked instantly. Written answers are marked by Claude against a rubric, with covered and missed points. Results show weak topics to review.
 - **Any Claude model:** Sonnet, Opus, Fable, Haiku or a specific model ID, with adjustable effort.
-- **Text or Visual reading:** Visual mode lets Claude look at the pages themselves, for scanned slides, diagrams and screenshots of code.
+- **Text or Visual reading:** Visual mode lets Claude look at the pages themselves, for scanned slides, diagrams, graphs and equations shown as images.
 - Light and dark themes, renameable materials and sets, and attempt history with score trends.
 
 ## Quick start
@@ -58,7 +61,7 @@ There is no Recall account or sign-in. It's open source and runs entirely on you
 | Upload | The PDF is saved to `data/uploads/` and its text is extracted per page (`unpdf`). |
 | Generate | `claude -p --model <model> --json-schema …` runs in the background. The lecture text goes in on stdin, and the questions come back as schema-validated JSON. Answer options are shuffled so the correct answer isn't always first. |
 | Combined sets | **New set** (`/generate`) builds one exam from several PDFs, with all selected by default. |
-| Code & artifacts | Optional question type (off by default). Claude shows a code snippet, query, algorithm, config or formula from the material, or writes one that applies what it teaches, and asks you to explain, trace or debug it. |
+| Artifacts | Claude takes an artifact from the material, or creates one that applies what it teaches, and asks you to work with it. Equations are LaTeX rendered with KaTeX; graphs (line, scatter or bar) are drawn from data series, with hover values and a data table; tables, case studies and code are shown as they are. |
 | Visual mode | The selected pages are split into PDFs of up to 10 pages each, and Claude reads them with its Read tool, so it also sees diagrams and scanned slides. |
 | Grading | Multiple choice, single choice and fill-in-the-blank are graded instantly in code. Long answers and code answers are sent to Claude in one batch with the model answer and marking points. |
 | Storage | Everything lives in a local SQLite database at `data/exam-helper.db`. |

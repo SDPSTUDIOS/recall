@@ -6,10 +6,13 @@ import {
   TYPE_LABEL,
   isWritten,
   type Answer,
+  type Artifact,
   type Question,
   type QuestionResult,
 } from "@/lib/types";
 import { Badge, Card, cx } from "../ui";
+import { Chart } from "./Chart";
+import { RichText, Tex, hasMath } from "./RichText";
 
 export const fmt = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
 export const LETTERS = "ABCDEFGHIJ";
@@ -104,7 +107,9 @@ export function QuestionCard({
       {q.type === "fill_blank" ? (
         <FillBlank q={q} answer={answer} onChange={onChange} disabled={disabled} result={result} reveal={reveal} />
       ) : (
-        <p className="whitespace-pre-wrap text-base font-medium leading-relaxed">{q.question}</p>
+        <p className="whitespace-pre-wrap text-base font-medium leading-relaxed">
+          <RichText text={q.question} />
+        </p>
       )}
 
       {q.artifact && <ArtifactBlock artifact={q.artifact} />}
@@ -117,12 +122,26 @@ export function QuestionCard({
         <div className="mt-4">
           <textarea
             className="min-h-44 w-full resize-y rounded-lg border border-zinc-300 bg-white p-3 text-[15px] leading-relaxed outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 disabled:opacity-80 dark:border-zinc-700 dark:bg-zinc-950"
-            placeholder={q.type === "artifact" ? "Write your answer. You can refer to line numbers…" : "Write your answer…"}
+            placeholder={
+              q.artifact?.kind === "math" || q.artifact?.kind === "chart"
+                ? "Write your answer and show your working. Type maths as you would on a calculator, e.g. x^2 + 3x = 0 or sqrt(2)/2…"
+                : (q.artifact?.kind ?? "code") === "code" && q.type === "artifact"
+                  ? "Write your answer. You can refer to line numbers…"
+                  : "Write your answer…"
+            }
             aria-label={`Answer to question ${number}`}
             value={answer?.kind === "text" ? answer.text : ""}
             onChange={(e) => onChange({ kind: "text", text: e.target.value })}
             disabled={disabled}
           />
+          {answer?.kind === "text" && hasMath(answer.text) && (
+            <div className="mt-2 rounded-lg border border-dashed border-zinc-300 px-3 py-2 text-[15px] leading-relaxed dark:border-zinc-700">
+              <div className="mb-1 text-xs font-medium text-muted">Preview</div>
+              <p className="whitespace-pre-wrap">
+                <RichText text={answer.text} />
+              </p>
+            </div>
+          )}
           {!disabled && (
             <div className="mt-1 text-right text-xs tabular-nums text-subtle">
               {wordCount(answer?.kind === "text" ? answer.text : "")} words
@@ -206,7 +225,9 @@ function Choices({
             >
               {LETTERS[i]}
             </span>
-            <span className="flex-1 whitespace-pre-wrap pt-0.5">{opt}</span>
+            <span className="flex-1 whitespace-pre-wrap pt-0.5">
+              <RichText text={opt} />
+            </span>
             {reveal && isCorrect && <Check className="mt-0.5 size-4 shrink-0 text-emerald-600" />}
             {reveal && !isCorrect && isSelected && <X className="mt-0.5 size-4 shrink-0 text-red-600" />}
           </label>
@@ -238,7 +259,9 @@ function FillBlank({
     <p className="text-base font-medium leading-loose">
       {parts.map((part, i) => (
         <span key={i}>
-          <span className="whitespace-pre-wrap">{part}</span>
+          <span className="whitespace-pre-wrap">
+            <RichText text={part} />
+          </span>
           {i < parts.length - 1 && (
             <span className="inline-flex flex-col align-baseline">
               <input
@@ -270,12 +293,70 @@ function FillBlank({
   );
 }
 
-function ArtifactBlock({ artifact }: { artifact: { language: string; content: string } }) {
+function ArtifactBlock({ artifact }: { artifact: Artifact }) {
+  const kind = artifact.kind ?? "code";
+  if (kind === "code") return <CodeBlock artifact={artifact} />;
+
+  const caption = artifact.title || { math: "Equations", chart: "Graph", table: "Data", text: "Case" }[kind];
+  return (
+    <figure className="mt-4 overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-800">
+      <figcaption className="border-b border-zinc-200 bg-zinc-50 px-3 py-1.5 text-xs font-medium text-muted dark:border-zinc-800 dark:bg-zinc-800/50">
+        <RichText text={caption} />
+      </figcaption>
+      {kind === "math" && (
+        <div className="space-y-1 px-4 py-3 text-[17px]">
+          {artifact.content.split("\n").map((line, i) => (
+            <Tex key={i} tex={line} display />
+          ))}
+        </div>
+      )}
+      {kind === "chart" && artifact.chart && (
+        <div className="p-3">
+          <Chart chart={artifact.chart} title={artifact.title} />
+        </div>
+      )}
+      {kind === "table" && artifact.table && (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-zinc-50 dark:bg-zinc-800/50">
+              <tr>
+                {artifact.table.columns.map((c, i) => (
+                  <th key={i} className="px-3 py-2 text-left font-semibold">
+                    <RichText text={c} />
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {artifact.table.rows.map((row, i) => (
+                <tr key={i} className="border-t border-zinc-100 dark:border-zinc-800">
+                  {row.map((cell, j) => (
+                    <td key={j} className="px-3 py-2 align-top tabular-nums">
+                      <RichText text={cell} />
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {kind === "text" && (
+        <p className="whitespace-pre-wrap border-l-4 border-brand-300 bg-brand-50/40 px-4 py-3 text-[15px] leading-relaxed dark:border-brand-800 dark:bg-brand-950/20">
+          <RichText text={artifact.content} />
+        </p>
+      )}
+    </figure>
+  );
+}
+
+function CodeBlock({ artifact }: { artifact: Artifact }) {
   const lines = artifact.content.split("\n");
   return (
     <figure className="mt-4 overflow-hidden rounded-lg border border-zinc-200 bg-zinc-950 text-zinc-100 dark:border-zinc-800">
-      <figcaption className="border-b border-zinc-800 px-3 py-1.5 text-xs font-medium text-zinc-400">
-        {artifact.language}
+      <figcaption className="flex gap-2 border-b border-zinc-800 px-3 py-1.5 text-xs font-medium text-zinc-400">
+        {artifact.title && <span className="text-zinc-300">{artifact.title}</span>}
+        <span>{artifact.language}</span>
       </figcaption>
       <pre className="overflow-x-auto py-3 font-mono text-[13px] leading-relaxed">
         <code className="table min-w-full">
@@ -297,19 +378,21 @@ function Review({ q, result }: { q: Question; result?: QuestionResult }) {
       {result?.feedback && (
         <div>
           <div className="mb-1 font-medium">Claude&apos;s feedback</div>
-          <p className="whitespace-pre-wrap text-zinc-700 dark:text-zinc-300">{result.feedback}</p>
+          <p className="whitespace-pre-wrap text-zinc-700 dark:text-zinc-300">
+            <RichText text={result.feedback} />
+          </p>
         </div>
       )}
       {isWritten(q.type) && (result?.coveredPoints?.length || result?.missedPoints?.length) ? (
         <ul className="space-y-1">
           {result.coveredPoints?.map((p, i) => (
             <li key={`c${i}`} className="flex gap-2 text-emerald-700 dark:text-emerald-400">
-              <Check className="mt-0.5 size-4 shrink-0" /> {p}
+              <Check className="mt-0.5 size-4 shrink-0" /> <span><RichText text={p} /></span>
             </li>
           ))}
           {result.missedPoints?.map((p, i) => (
             <li key={`m${i}`} className="flex gap-2 text-red-700 dark:text-red-400">
-              <X className="mt-0.5 size-4 shrink-0" /> {p}
+              <X className="mt-0.5 size-4 shrink-0" /> <span><RichText text={p} /></span>
             </li>
           ))}
         </ul>
@@ -317,10 +400,14 @@ function Review({ q, result }: { q: Question; result?: QuestionResult }) {
       {isWritten(q.type) && (
         <details open={!result}>
           <summary className="cursor-pointer font-medium">Model answer and marking points</summary>
-          <p className="mt-2 whitespace-pre-wrap text-zinc-700 dark:text-zinc-300">{q.modelAnswer}</p>
+          <p className="mt-2 whitespace-pre-wrap text-zinc-700 dark:text-zinc-300">
+            <RichText text={q.modelAnswer} />
+          </p>
           <ul className="mt-2 list-disc space-y-1 pl-5 text-zinc-600 dark:text-zinc-400">
             {q.keyPoints.map((p, i) => (
-              <li key={i}>{p}</li>
+              <li key={i}>
+                <RichText text={p} />
+              </li>
             ))}
           </ul>
         </details>
@@ -328,7 +415,9 @@ function Review({ q, result }: { q: Question; result?: QuestionResult }) {
       {q.explanation && (
         <div>
           <div className="mb-1 font-medium">Explanation</div>
-          <p className="whitespace-pre-wrap text-zinc-700 dark:text-zinc-300">{q.explanation}</p>
+          <p className="whitespace-pre-wrap text-zinc-700 dark:text-zinc-300">
+            <RichText text={q.explanation} />
+          </p>
         </div>
       )}
       {q.source && <div className="text-xs text-muted">Source: {q.source}</div>}
