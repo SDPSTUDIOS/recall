@@ -3,7 +3,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { UPLOAD_DIR } from "@/lib/db";
 import { extractPages } from "@/lib/pdf";
-import { insertDocument } from "@/lib/repo";
+import { getUnit, insertDocument } from "@/lib/repo";
 
 const MAX_BYTES = 100 * 1024 * 1024;
 
@@ -12,6 +12,11 @@ export async function POST(request: Request) {
   const file = form.get("file");
   if (!(file instanceof File)) {
     return Response.json({ error: "No file uploaded." }, { status: 400 });
+  }
+  // Every document belongs to a unit.
+  const unitId = String(form.get("unitId") ?? "");
+  if (!unitId || !getUnit(unitId)) {
+    return Response.json({ error: "Choose a unit for this PDF first." }, { status: 400 });
   }
   if (file.size > MAX_BYTES) {
     return Response.json({ error: "PDF is larger than 100 MB." }, { status: 413 });
@@ -40,6 +45,7 @@ export async function POST(request: Request) {
   insertDocument(
     {
       id,
+      unitId,
       name: file.name.replace(/\.pdf$/i, ""),
       fileName,
       size: file.size,

@@ -9,6 +9,7 @@ import {
   Clock,
   Eye,
   Flag,
+  History,
   LayoutList,
   Minus,
   Send,
@@ -304,8 +305,8 @@ export function QuizRunner({
         <ScoreSummary attempt={attempt} questions={questions} onRetake={retake} />
         {error && <ErrorText>{error}</ErrorText>}
 
-        <div className="sticky top-14 z-10 -mx-4 flex flex-wrap items-center gap-2 border-b border-zinc-200 bg-[var(--background)]/90 px-4 py-2.5 lg:top-0 lg:-mx-8 lg:px-8 backdrop-blur dark:border-zinc-800">
-          <span className="mr-1 text-sm font-medium">Review</span>
+        <div className="sticky top-14 z-10 -mx-4 border-b border-line bg-background/90 px-4 py-2.5 backdrop-blur-md sm:-mx-6 sm:px-6 lg:top-0 lg:-mx-10 lg:px-10 flex flex-wrap items-center gap-3">
+          <span className="mr-1 text-sm font-semibold">Review</span>
           <ToggleGroup
             label="Filter questions"
             value={filter}
@@ -319,7 +320,7 @@ export function QuizRunner({
         </div>
 
         {visible.length === 0 ? (
-          <p className="py-10 text-center text-sm text-muted">
+          <p className="rounded-xl border border-dashed border-line-strong py-12 text-center text-sm text-muted">
             {filter === "review" ? "Nothing to review. Every answer was correct." : "No questions here."}
           </p>
         ) : (
@@ -383,7 +384,7 @@ export function QuizRunner({
       {confirmDialog}
 
       {/* Toolbar */}
-      <div className="sticky top-14 z-10 -mx-4 border-b border-zinc-200 bg-[var(--background)]/90 px-4 py-2.5 lg:top-0 lg:-mx-8 lg:px-8 backdrop-blur dark:border-zinc-800">
+      <div className="sticky top-14 z-10 -mx-4 border-b border-line bg-background/90 px-4 py-2.5 backdrop-blur-md sm:-mx-6 sm:px-6 lg:top-0 lg:-mx-10 lg:px-10">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
           <ToggleGroup
             label="Mode"
@@ -405,7 +406,8 @@ export function QuizRunner({
             ]}
           />
           <span className="text-sm tabular-nums text-muted">
-            <span className="font-medium text-zinc-800 dark:text-zinc-200">{answeredCount}</span>/{questions.length} answered
+            <span className="font-mono font-medium text-foreground">{answeredCount}</span>
+            <span className="font-mono">/{questions.length}</span> <span className="hidden sm:inline">answered</span>
           </span>
           <Timer startedAt={startedAt} />
           <Button onClick={submit} disabled={submitting} className="ml-auto">
@@ -413,22 +415,26 @@ export function QuizRunner({
             {submitting ? (hasWritten ? "Claude is grading…" : "Grading…") : "Submit"}
           </Button>
         </div>
-        <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800">
+        {/* Progress runs along the bottom edge of the toolbar. */}
+        <div className="absolute inset-x-0 -bottom-px h-px">
           <div
             role="progressbar"
             aria-label="Questions answered"
             aria-valuemin={0}
             aria-valuemax={questions.length}
             aria-valuenow={answeredCount}
-            className="h-full origin-left rounded-full bg-brand-600 transition-transform duration-300 ease-out"
+            className="h-full origin-left bg-foreground transition-transform duration-500 ease-(--ease-out-expo)"
             style={{ transform: `scaleX(${answeredCount / Math.max(1, questions.length)})` }}
           />
         </div>
       </div>
 
       {restored && answeredCount > 0 && (
-        <div className="animate-fade-up flex flex-wrap items-center justify-between gap-2 rounded-lg border border-brand-200 bg-brand-50 px-3 py-2 text-sm text-brand-800 dark:border-brand-900 dark:bg-brand-950/40 dark:text-brand-300">
-          <span>Welcome back. Your answers from last time were restored.</span>
+        <div className="animate-fade-up flex flex-wrap items-center justify-between gap-2 rounded-lg border border-line-strong bg-sunken px-4 py-3 text-sm">
+          <span className="flex items-center gap-2">
+            <History className="size-4 shrink-0" aria-hidden />
+            Welcome back. Your answers from last time were restored.
+          </span>
           <button
             type="button"
             className="font-medium underline-offset-2 hover:underline"
@@ -447,18 +453,21 @@ export function QuizRunner({
 
       {layout === "focus" && q ? (
         <div className="@container">
-          <div className="grid gap-5 @3xl:grid-cols-[1fr_15rem] @3xl:items-start">
+          <div className="grid gap-5 @3xl:grid-cols-[1fr_16rem] @3xl:items-start">
             <div className="min-w-0 space-y-4">
-              <div key={q.id} className="animate-fade-up">
+              <div key={q.id} className="animate-pop-in">
                 {card(q, true)}
               </div>
               <div className="flex items-center justify-between gap-3">
                 <Button variant="secondary" onClick={() => go(current - 1)} disabled={current === 0}>
                   <ArrowLeft className="size-4" /> Previous
                 </Button>
+                <span className="font-mono text-xs tabular-nums text-subtle">
+                  {current + 1} / {questions.length}
+                </span>
                 {current < questions.length - 1 ? (
-                  <Button onClick={() => go(current + 1)}>
-                    Next <ArrowRight className="size-4" />
+                  <Button onClick={() => go(current + 1)} className="group">
+                    Next <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
                   </Button>
                 ) : (
                   <Button onClick={submit} disabled={submitting}>
@@ -466,7 +475,7 @@ export function QuizRunner({
                   </Button>
                 )}
               </div>
-              <p className="hidden flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted sm:flex">
+              <p className="hidden flex-wrap items-center justify-center gap-x-5 gap-y-1 pt-1 text-xs text-subtle sm:flex">
                 <span className="inline-flex items-center gap-1"><Kbd>←</Kbd><Kbd>→</Kbd> move</span>
                 <span className="inline-flex items-center gap-1"><Kbd>A</Kbd>–<Kbd>F</Kbd> choose option</span>
                 <span className="inline-flex items-center gap-1"><Kbd>M</Kbd> mark for review</span>
@@ -512,8 +521,9 @@ function GroupedList({
         if (group.length === 0) return null;
         return (
           <section key={type} className="space-y-3">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">
-              {label} <span className="font-normal normal-case">({group.length})</span>
+            <h2 className="flex items-baseline gap-2 pt-4 text-sm font-semibold">
+              {label}
+              <span className="font-mono text-xs font-normal tabular-nums text-subtle">{group.length}</span>
             </h2>
             {group.map(render)}
           </section>
@@ -539,9 +549,14 @@ function Navigator({
   resultOf: (q: Question) => QuestionResult | undefined;
 }) {
   return (
-    <nav aria-label="Questions" className="@3xl:sticky @3xl:top-22">
-      <div className="rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900">
-        <div className="mb-2 text-xs font-medium text-muted">Questions</div>
+    <nav aria-label="Questions" className="@3xl:sticky @3xl:top-32 lg:@3xl:top-20">
+      <div className="rounded-xl border border-line p-4">
+        <div className="mb-3 flex items-baseline justify-between">
+          <span className="text-xs font-medium text-subtle">Questions</span>
+          <span className="font-mono text-[11px] tabular-nums text-subtle">
+            {questions.filter(answered).length}/{questions.length}
+          </span>
+        </div>
         <div className="grid grid-cols-[repeat(auto-fill,minmax(2.25rem,1fr))] gap-1.5">
           {questions.map((q, i) => {
             const r = resultOf(q);
@@ -563,23 +578,23 @@ function Navigator({
                 aria-current={i === current ? "step" : undefined}
                 aria-label={`Question ${i + 1}${answered(q) ? ", answered" : ""}${statusText}${isFlagged ? ", marked for review" : ""}`}
                 className={cx(
-                  "relative grid h-9 place-items-center rounded-md border text-xs font-medium tabular-nums transition-colors pointer-coarse:h-11",
+                  "relative grid h-9 place-items-center rounded-md border font-mono text-xs font-medium tabular-nums transition-[background-color,border-color,transform,color] duration-150 active:scale-95 pointer-coarse:h-11",
                   r?.status === "correct"
-                    ? "border-emerald-500 bg-emerald-500 text-white"
+                    ? "border-emerald-600 bg-emerald-600 text-white"
                     : r?.status === "partial"
-                      ? "border-amber-500 bg-amber-500 text-white"
+                      ? "border-amber-500 bg-amber-500 text-black"
                       : r
-                        ? "border-red-500 bg-red-500 text-white"
+                        ? "border-red-600 bg-red-600 text-white"
                         : answered(q)
-                          ? "border-brand-200 bg-brand-100 text-brand-800 dark:border-brand-900 dark:bg-brand-950 dark:text-brand-200"
-                          : "border-zinc-200 text-muted hover:border-zinc-400 dark:border-zinc-700",
-                  i === current && "ring-2 ring-brand-500 ring-offset-1 ring-offset-white dark:ring-offset-zinc-900",
+                          ? "border-foreground bg-foreground text-background"
+                          : "border-line text-muted hover:border-line-strong hover:text-foreground",
+                  i === current && "outline-2 outline-offset-2 outline-foreground",
                 )}
               >
                 {i + 1}
                 {StatusIcon && (
                   <StatusIcon
-                    className="absolute -bottom-1 -right-1 size-3.5 rounded-full bg-white p-0.5 text-zinc-800 shadow-sm ring-1 ring-zinc-200 dark:bg-zinc-900 dark:text-zinc-100 dark:ring-zinc-700"
+                    className="absolute -bottom-1 -right-1 size-3.5 rounded-full border border-line-strong bg-background p-0.5 text-foreground"
                     strokeWidth={3}
                     aria-hidden
                   />
@@ -591,9 +606,9 @@ function Navigator({
             );
           })}
         </div>
-        <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted">
+        <div className="mt-4 flex flex-wrap gap-x-3 gap-y-1 border-t border-line pt-3 text-xs text-muted">
           <span className="inline-flex items-center gap-1">
-            <span className="size-2.5 rounded-sm bg-brand-200 dark:bg-brand-900" /> Answered
+            <span className="size-2.5 rounded-[3px] bg-foreground" /> Answered
           </span>
           <span className="inline-flex items-center gap-1">
             <Flag className="size-2.5 fill-amber-500 text-amber-500" /> Marked
@@ -628,8 +643,11 @@ function Timer({ startedAt }: { startedAt: number | null }) {
   const m = Math.floor((s % 3600) / 60);
   const text = `${h ? `${h}:` : ""}${String(m).padStart(h ? 2 : 1, "0")}:${String(s % 60).padStart(2, "0")}`;
   return (
-    <span className="inline-flex items-center gap-1 text-sm tabular-nums text-muted" title="Time spent">
-      <Clock className="size-3.5" /> {text}
+    <span
+      className="inline-flex items-center gap-1.5 font-mono text-xs tabular-nums text-muted"
+      title="Time spent"
+    >
+      <Clock className="size-3.5" aria-hidden /> {text}
     </span>
   );
 }

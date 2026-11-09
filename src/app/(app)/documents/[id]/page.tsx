@@ -6,9 +6,10 @@ import { DeleteButton } from "@/components/DeleteButton";
 import { EditableTitle } from "@/components/EditableTitle";
 import { GenerateForm } from "@/components/GenerateForm";
 import { QuizList } from "@/components/QuizList";
-import { BackLink, Badge, PageLoading, SectionTitle } from "@/components/ui";
+import { MoveToUnit } from "@/components/units/MoveToUnit";
+import { Badge, IconTile, PageHeader, PageLoading, SectionTitle } from "@/components/ui";
 import { formatBytes, formatDate, isLowText } from "@/lib/format";
-import { attemptStats, getDocument, listQuizzes } from "@/lib/repo";
+import { attemptStats, getDocument, getUnit, listQuizzes } from "@/lib/repo";
 
 export default function DocumentPage({ params }: PageProps<"/documents/[id]">) {
   return (
@@ -26,47 +27,55 @@ async function DocumentView({ params }: { params: PageProps<"/documents/[id]">["
   const quizzes = listQuizzes(id);
   const stats = attemptStats();
   const lowText = isLowText(doc);
+  const unit = getUnit(doc.unitId);
 
   return (
-    <div className="space-y-8">
-      <div>
-        <BackLink href="/">Library</BackLink>
-        <div className="mt-3 flex flex-wrap items-start justify-between gap-4">
-          <div className="flex min-w-0 flex-1 gap-3">
-            <span className="grid size-11 shrink-0 place-items-center rounded-lg bg-red-50 text-red-600 dark:bg-red-950/60 dark:text-red-400">
-              <FileText className="size-5" />
-            </span>
-            <div className="min-w-0 flex-1">
-              <EditableTitle
-                value={doc.name}
-                url={`/api/documents/${doc.id}`}
-                field="name"
-                className="text-xl font-semibold tracking-tight"
-              />
-              <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-sm text-muted">
-                <span>{doc.pageCount} pages</span>·<span>{formatBytes(doc.size)}</span>·
-                <span>uploaded {formatDate(doc.createdAt)}</span>
-                {lowText && <Badge tone="amber">Scanned, use Visual mode</Badge>}
-              </p>
-            </div>
+    <div className="space-y-12">
+      <PageHeader
+        back={unit ? { href: `/units/${unit.id}`, label: unit.name } : { href: "/", label: "Library" }}
+        eyebrow={unit?.code ? `${unit.code} · Lecture material` : "Lecture material"}
+        icon={
+          <IconTile size="lg" className="mt-1 hidden sm:grid">
+            <FileText className="size-6" />
+          </IconTile>
+        }
+        title={
+          <EditableTitle
+            value={doc.name}
+            url={`/api/documents/${doc.id}`}
+            field="name"
+            className="font-display text-3xl leading-[1.1] sm:text-4xl"
+          />
+        }
+        meta={
+          <div className="space-y-3">
+            <p className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-sm text-muted">
+              <Badge>{doc.pageCount} pages</Badge>
+              <Badge>{formatBytes(doc.size)}</Badge>
+              <span className="font-mono text-xs text-subtle">uploaded {formatDate(doc.createdAt)}</span>
+              {lowText && <Badge tone="amber">Scanned, use Visual mode</Badge>}
+            </p>
+            <MoveToUnit documentId={doc.id} unitId={doc.unitId} />
           </div>
+        }
+        actions={
           <DeleteButton
             url={`/api/documents/${doc.id}`}
-            redirectTo="/"
+            redirectTo={unit ? `/units/${unit.id}` : "/"}
             title={`Delete "${doc.name}"?`}
             body="The PDF and the question sets made only from it are deleted. Combined sets that also use other materials are kept."
           />
-        </div>
-      </div>
+        }
+      />
 
       {quizzes.length > 0 && (
-        <section className="space-y-3">
-          <SectionTitle>Question sets</SectionTitle>
+        <section className="space-y-4">
+          <SectionTitle count={quizzes.length}>Question sets</SectionTitle>
           <QuizList quizzes={quizzes} stats={stats} />
         </section>
       )}
 
-      <section className="space-y-3">
+      <section className="space-y-4">
         <SectionTitle>{quizzes.length > 0 ? "New question set" : "Create your first question set"}</SectionTitle>
         <GenerateForm documents={[{ ...doc, lowText }]} />
       </section>

@@ -9,7 +9,7 @@ import { Button, Card, Spinner, buttonClass, cx } from "./ui";
 export function CopyCommand({ command }: { command: string }) {
   const [copied, setCopied] = useState(false);
   return (
-    <div className="flex items-center gap-2 rounded-lg bg-zinc-950 py-1.5 pl-3 pr-1.5 font-mono text-[13px] text-zinc-100 dark:bg-black/50">
+    <div className="group flex items-center gap-2.5 rounded-lg bg-zinc-950 py-1.5 pl-3.5 pr-1.5 font-mono text-[13px] text-zinc-100 ring-1 ring-zinc-800">
       <span className="select-none text-zinc-500">$</span>
       <code className="min-w-0 flex-1 overflow-x-auto whitespace-nowrap">{command}</code>
       <button
@@ -23,7 +23,7 @@ export function CopyCommand({ command }: { command: string }) {
             /* clipboard blocked */
           }
         }}
-        className="grid size-7 shrink-0 place-items-center rounded-md text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
+        className="grid size-8 shrink-0 place-items-center rounded-lg text-zinc-400 transition-colors hover:bg-white/10 hover:text-zinc-100"
         aria-label={copied ? "Copied" : `Copy ${command}`}
         title={copied ? "Copied" : "Copy"}
       >
@@ -50,20 +50,20 @@ function Step({
     <li className="group/step relative flex gap-4 pb-8 last:pb-0">
       <span
         className={cx(
-          "z-10 grid size-8 shrink-0 place-items-center rounded-full border text-sm font-semibold",
+          "z-10 grid size-8 shrink-0 place-items-center rounded-full font-mono text-sm font-semibold transition-colors",
           done
-            ? "border-emerald-500 bg-emerald-500 text-white"
+            ? "bg-foreground text-background"
             : active
-              ? "border-brand-500 bg-brand-50 text-brand-700 dark:bg-brand-950 dark:text-brand-300"
-              : "border-zinc-300 bg-white text-muted dark:border-zinc-700 dark:bg-zinc-900",
+              ? "bg-background text-foreground ring-[1.5px] ring-inset ring-foreground"
+              : "bg-(--surface) text-muted ring-1 ring-inset ring-line-strong",
         )}
       >
         {done ? <Check className="size-4" /> : n}
       </span>
-      <span className="absolute left-4 top-8 -ml-px h-full w-0.5 bg-zinc-200 group-last/step:hidden dark:bg-zinc-800" aria-hidden />
+      <span className="absolute left-4 top-8 -ml-px h-full w-0.5 bg-line-strong group-last/step:hidden" aria-hidden />
       <div className={cx("min-w-0 flex-1 pt-1", !active && !done && "opacity-60")}>
-        <div className="font-medium">{title}</div>
-        <div className="mt-2 space-y-2 text-sm text-zinc-600 dark:text-zinc-400">{children}</div>
+        <div className="text-[15px] font-semibold tracking-tight">{title}</div>
+        <div className="mt-2 space-y-2.5 text-sm leading-relaxed text-muted">{children}</div>
       </div>
     </li>
   );
@@ -82,17 +82,19 @@ export function SetupChecklist() {
   };
 
   return (
-    <Card className="p-5 sm:p-6">
+    <Card className="animate-fade-up p-5 sm:p-7">
       {!status ? (
         <div className="flex items-center gap-3 text-sm text-muted">
           <Spinner /> Checking for Claude Code…
         </div>
       ) : loggedIn ? (
-        <div className="mb-6 flex flex-wrap items-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-900 dark:bg-emerald-950/40">
-          <CheckCircle2 className="size-5 shrink-0 text-emerald-600" />
+        <div className="mb-7 flex flex-wrap items-center gap-3 rounded-xl border border-line-strong bg-sunken p-4">
+          <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-emerald-500 text-white">
+            <CheckCircle2 className="size-5" />
+          </span>
           <div className="min-w-0 flex-1 text-sm">
-            <div className="font-medium text-emerald-800 dark:text-emerald-300">You&apos;re all set</div>
-            <div className="text-emerald-700/80 dark:text-emerald-400/80">
+            <div className="font-semibold">You&apos;re all set</div>
+            <div className="text-muted">
               Connected through Claude Code
               {status.subscriptionType ? ` on your ${capitalize(status.subscriptionType)} plan` : ""}
               {status.email ? ` as ${status.email}` : ""}.
@@ -131,7 +133,7 @@ export function SetupChecklist() {
           {status && !loggedIn && status.error && (
             <details className="text-xs">
               <summary className="cursor-pointer text-muted">Details</summary>
-              <pre className="mt-1 whitespace-pre-wrap break-words rounded-md bg-zinc-100 p-2 font-mono text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
+              <pre className="mt-1.5 whitespace-pre-wrap break-words rounded-lg bg-zinc-100 p-3 font-mono text-zinc-600 ring-1 ring-inset ring-line dark:text-zinc-400">
                 {status.error}
               </pre>
             </details>

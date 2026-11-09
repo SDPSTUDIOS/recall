@@ -4,37 +4,41 @@ import { Suspense } from "react";
 import { io } from "next/cache";
 import { Upload } from "lucide-react";
 import { GenerateForm } from "@/components/GenerateForm";
-import { BackLink, EmptyState, PageLoading, buttonClass } from "@/components/ui";
+import { EmptyState, PageHeader, PageLoading, buttonClass } from "@/components/ui";
 import { isLowText } from "@/lib/format";
-import { listDocuments } from "@/lib/repo";
+import { listDocuments, listUnits } from "@/lib/repo";
 
 export const metadata: Metadata = { title: "New question set" };
 
-export default function GeneratePage() {
+export default function GeneratePage({ searchParams }: PageProps<"/generate">) {
   return (
-    <div className="space-y-6">
-      <div>
-        <BackLink href="/">Library</BackLink>
-        <h1 className="mt-3 text-2xl font-semibold tracking-tight">New question set</h1>
-        <p className="mt-1 text-zinc-600 dark:text-zinc-400">
-          Pick the lectures to cover. Claude spreads the questions across them and notes where each
-          one comes from.
-        </p>
-      </div>
+    <div className="space-y-8">
+      <PageHeader
+        back={{ href: "/", label: "Library" }}
+        eyebrow="Create"
+        title={
+          <h1 className="font-display text-4xl leading-[1.05] sm:text-5xl">
+            A new <span className="text-subtle">question set</span>
+          </h1>
+        }
+        description="Pick a unit's lectures to cover. Claude spreads the questions across them and notes where each one comes from."
+      />
       <Suspense fallback={<PageLoading />}>
-        <Picker />
+        <Picker searchParams={searchParams} />
       </Suspense>
     </div>
   );
 }
 
-async function Picker() {
+async function Picker({ searchParams }: { searchParams: PageProps<"/generate">["searchParams"] }) {
+  const { unit } = await searchParams;
   await io();
   const documents = listDocuments();
+  const units = listUnits();
   if (documents.length === 0) {
     return (
       <EmptyState
-        icon={<Upload className="size-5" />}
+        icon={<Upload className="size-6" />}
         title="No lecture materials yet"
         action={
           <Link href="/" className={buttonClass("primary")}>
@@ -46,12 +50,20 @@ async function Picker() {
       </EmptyState>
     );
   }
-  // Oldest first, so lectures appear in course order.
-  const ordered = [...documents].reverse().map((d) => ({
-    id: d.id,
-    name: d.name,
-    pageCount: d.pageCount,
-    lowText: isLowText(d),
-  }));
-  return <GenerateForm documents={ordered} pickable />;
+  // Grouped by unit (newest unit first), lectures oldest first so they read in course order.
+  const unitOrder = new Map(units.map((u, i) => [u.id, i]));
+  const unitLabel = new Map(units.map((u) => [u.id, u.code ? `${u.code} · ${u.name}` : u.name]));
+  const ordered = [...documents]
+    .reverse()
+    .sort((a, b) => (unitOrder.get(a.unitId) ?? 0) - (unitOrder.get(b.unitId) ?? 0))
+    .map((d) => ({
+      id: d.id,
+      name: d.name,
+      pageCount: d.pageCount,
+      lowText: isLowText(d),
+      unitId: d.unitId,
+      unitName: unitLabel.get(d.unitId) ?? "Unit",
+    }));
+  const requested = typeof unit === "string" && unitOrder.has(unit) ? unit : undefined;
+  return <GenerateForm documents={ordered} pickable initialUnitId={requested ?? ordered[0]?.unitId} />;
 }

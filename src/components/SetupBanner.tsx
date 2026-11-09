@@ -11,17 +11,16 @@ export function SetupBanner() {
   if (!status || status.loggedIn) return null;
 
   return (
-    <div className="animate-fade-up flex flex-wrap items-center gap-4 rounded-xl border border-amber-300 bg-amber-50 p-4 dark:border-amber-900 dark:bg-amber-950/40">
-      <span className="grid size-10 shrink-0 place-items-center rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/60 dark:text-amber-300">
-        <PlugZap className="size-5" />
+    <div className="animate-fade-up flex flex-wrap items-center gap-4 rounded-xl border border-line-strong bg-sunken p-4">
+      <span className="grid size-10 shrink-0 place-items-center rounded-lg border border-amber-600/30 text-amber-700 dark:border-amber-400/30 dark:text-amber-400">
+        <PlugZap className="size-[18px]" />
       </span>
       <div className="min-w-0 flex-1 text-sm">
-        <div className="font-medium text-amber-900 dark:text-amber-200">
+        <div className="font-semibold">
           {status.installed ? "Sign in to Claude Code to start" : "Connect Claude to start"}
         </div>
-        <p className="text-amber-800/80 dark:text-amber-300/80">
-          You can upload PDFs now. Generating and grading questions needs Claude Code signed in to
-          your Claude account.
+        <p className="mt-0.5 text-muted">
+          You can upload PDFs now. Generating and grading questions needs Claude Code signed in to your Claude account.
         </p>
       </div>
       <Link href="/setup" className={buttonClass("primary")}>

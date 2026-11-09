@@ -102,8 +102,24 @@ export interface GenerationConfig {
 
 export type QuizStatus = "generating" | "ready" | "error";
 
+/** A course unit (module). Every uploaded document belongs to exactly one. */
+export interface UnitRecord {
+  id: string;
+  name: string;
+  /** Optional course code, e.g. "CS2010". */
+  code: string | null;
+  createdAt: number;
+}
+
+export interface UnitSummary extends UnitRecord {
+  documentCount: number;
+  quizCount: number;
+  pageCount: number;
+}
+
 export interface DocumentRecord {
   id: string;
+  unitId: string;
   name: string;
   fileName: string;
   size: number;
@@ -172,7 +188,95 @@ export interface TutorMessage {
 /** Saved Ask Claude conversations for a question set, by question id. */
 export type TutorChats = Record<string, TutorMessage[]>;
 
-export const MODEL_PRESETS: { value: string; label: string; hint: string }[] = [
+// ---------- viva ----------
+
+export type VivaStatus = "preparing" | "ready" | "error";
+
+/** Where the code came from: a GitHub repository, or a zip file the student uploaded. */
+export type VivaSource = "github" | "zip";
+
+export interface VivaConfig {
+  model: string;
+  effort: Effort;
+  /** Number of topics the examiner plans to cover. */
+  topicCount: number;
+  difficulty: Difficulty | "mixed";
+  focus: string;
+}
+
+/** One planned line of questioning. Private to the examiner: never shown before the viva ends. */
+export interface VivaTopic {
+  id: string;
+  title: string;
+  /** The opening question for this topic. */
+  question: string;
+  files: string[];
+  /** What a strong answer shows. */
+  lookFor: string[];
+  /** Relevant code from the repository, quoted with its path, for the examiner to refer to. */
+  excerpt: string;
+}
+
+/** What Claude learnt about the project while preparing the viva. */
+export interface VivaBrief {
+  summary: string;
+  stack: string[];
+  architecture: string;
+  keyFiles: { path: string; purpose: string }[];
+  topics: VivaTopic[];
+}
+
+export interface VivaMessage extends TutorMessage {
+  /** The topic (1-based) being discussed when the message was written; 0 before the first one. */
+  topic: number;
+}
+
+export interface VivaTopicResult {
+  topicId: string;
+  /** Whether the viva got to this topic before it ended. */
+  reached: boolean;
+  /** Out of 10. */
+  score: number;
+  feedback: string;
+}
+
+export interface VivaResult {
+  /** 0-100, across the topics that were reached. */
+  score: number;
+  summary: string;
+  strengths: string[];
+  improvements: string[];
+  topics: VivaTopicResult[];
+}
+
+export interface VivaRecord {
+  id: string;
+  source: VivaSource;
+  /** The GitHub link; empty for a zip. */
+  repoUrl: string;
+  /** "owner/repo" for GitHub, the file name for a zip. */
+  repoName: string;
+  branch: string | null;
+  commit: string | null;
+  title: string;
+  status: VivaStatus;
+  error: string | null;
+  config: VivaConfig;
+  brief: VivaBrief | null;
+  messages: VivaMessage[];
+  /** 1-based topic the examiner is on; 0 before the first question. */
+  topicIndex: number;
+  /** The examiner has wrapped up the viva. */
+  ended: boolean;
+  result: VivaResult | null;
+  modelUsed: string | null;
+  durationMs: number | null;
+  createdAt: number;
+  startedAt: number;
+  completedAt: number | null;
+}
+
+export const MODEL_PRESETS:{ value: string; label: string; hint: string }[] = [
   { value: "sonnet", label: "Sonnet (latest)", hint: "Balanced quality and speed. Good default" },
   { value: "opus", label: "Opus (latest)", hint: "Deep reasoning, best for hard material" },
   { value: "fable", label: "Fable (latest)", hint: "Anthropic's newest family" },
