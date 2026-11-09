@@ -4,16 +4,58 @@
    saved choice or the system preference before first paint. */
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
-/* Secondary text (muted) and tertiary text (subtle) both stay above 4.5:1
-   against the page and card backgrounds in each theme. */
+/*
+ * Recall design tokens: monochrome.
+ *
+ * Every grey is a true neutral (zero chroma), so the interface reads as ink on
+ * paper in light mode and white on black in dark mode. Overriding zinc here means
+ * every zinc-* utility picks it up. "brand" is the same neutral ramp: emphasis
+ * comes from contrast, weight and space, never from a hue.
+ *
+ * Colour is reserved for meaning: green, amber and red mark answers as right,
+ * partly right or wrong, and always sit beside an icon or a word.
+ */
+@theme {
+  --color-zinc-50: oklch(0.985 0 0);
+  --color-zinc-100: oklch(0.967 0 0);
+  --color-zinc-200: oklch(0.922 0 0);
+  --color-zinc-300: oklch(0.87 0 0);
+  --color-zinc-400: oklch(0.708 0 0);
+  --color-zinc-500: oklch(0.556 0 0);
+  --color-zinc-600: oklch(0.439 0 0);
+  --color-zinc-700: oklch(0.371 0 0);
+  --color-zinc-800: oklch(0.269 0 0);
+  --color-zinc-900: oklch(0.205 0 0);
+  --color-zinc-950: oklch(0.145 0 0);
+
+  --color-brand-50: oklch(0.985 0 0);
+  --color-brand-100: oklch(0.967 0 0);
+  --color-brand-200: oklch(0.922 0 0);
+  --color-brand-300: oklch(0.87 0 0);
+  --color-brand-400: oklch(0.708 0 0);
+  --color-brand-500: oklch(0.556 0 0);
+  --color-brand-600: oklch(0.371 0 0);
+  --color-brand-700: oklch(0.269 0 0);
+  --color-brand-800: oklch(0.205 0 0);
+  --color-brand-900: oklch(0.145 0 0);
+  --color-brand-950: oklch(0.1 0 0);
+
+  /* One curve for things arriving, a quicker one for things leaving. */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+  --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+
+/* Muted text is above 7:1 and subtle text above 4.5:1 on page and card in each theme. */
 :root {
-  --background: #f6f6f9;
-  --foreground: #18181b;
-  --muted: #5f5f6b;
-  --subtle: #71717a;
-  /* Chart series, validated as a set for colour-blind separation on the card
-     surface in each theme. The light aqua is under 3:1, so charts always ship
-     a legend, tooltips and a data table. */
+  --background: #ffffff;
+  --foreground: #0a0a0a;
+  --muted: #525252;
+  --subtle: #6b6b6b;
+  --surface: #ffffff;
+  --sunken: #fafafa;
+  --line: #ebebeb;
+  --line-strong: #d6d6d6;
   --series-1: #2a78d6;
   --series-2: #eb6834;
   --series-3: #1baf7a;
@@ -21,10 +63,14 @@
 }
 
 :root[data-theme="dark"] {
-  --background: #0b0b0f;
-  --foreground: #e4e4e7;
-  --muted: #a1a1aa;
-  --subtle: #8b8b95;
+  --background: #000000;
+  --foreground: #f2f2f2;
+  --muted: #a3a3a3;
+  --subtle: #8f8f8f;
+  --surface: #0a0a0a;
+  --sunken: #050505;
+  --line: #1f1f1f;
+  --line-strong: #333333;
   --series-1: #3987e5;
   --series-2: #d95926;
   --series-3: #199e70;
@@ -34,10 +80,14 @@
 /* Before the script runs (or without JS), follow the system. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme]) {
-    --background: #0b0b0f;
-    --foreground: #e4e4e7;
-    --muted: #a1a1aa;
-    --subtle: #8b8b95;
+    --background: #000000;
+    --foreground: #f2f2f2;
+    --muted: #a3a3a3;
+    --subtle: #8f8f8f;
+    --surface: #0a0a0a;
+    --sunken: #050505;
+    --line: #1f1f1f;
+    --line-strong: #333333;
     --series-1: #3987e5;
     --series-2: #d95926;
     --series-3: #199e70;
@@ -45,31 +95,64 @@
   }
 }
 
-/* Brand is violet rather than a green or teal so it never reads as "correct". */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-muted: var(--muted);
   --color-subtle: var(--subtle);
-  --color-brand-50: var(--color-violet-50);
-  --color-brand-100: var(--color-violet-100);
-  --color-brand-200: var(--color-violet-200);
-  --color-brand-300: var(--color-violet-300);
-  --color-brand-400: var(--color-violet-400);
-  --color-brand-500: var(--color-violet-500);
-  --color-brand-600: var(--color-violet-600);
-  --color-brand-700: var(--color-violet-700);
-  --color-brand-800: var(--color-violet-800);
-  --color-brand-900: var(--color-violet-900);
-  --color-brand-950: var(--color-violet-950);
-  --font-sans: var(--font-jakarta);
-  --font-mono: var(--font-geist-mono);
+  --color-surface: var(--surface);
+  --color-sunken: var(--sunken);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-jetbrains);
+  --font-display: var(--font-inter);
 }
+
+/* ---------- Surfaces ---------- */
+
+/* In the components layer, so any utility on the same element wins over these defaults. */
+@layer components {
+  /* A card: a flat panel defined by a hairline, no shadow. */
+  .surface {
+    background: var(--surface);
+    border: 1px solid var(--line);
+  }
+
+  /* Chrome that sits over scrolling content: the top bar and sticky toolbars. */
+  .glass {
+    background: color-mix(in oklab, var(--background) 82%, transparent);
+    border: 1px solid var(--line);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+}
+
+/* Inverted fill: black on light, white on dark. The one "accent" in the system. */
+@utility bg-gradient-brand {
+  background-color: var(--foreground);
+  color: var(--background);
+}
+
+/* Secondary words in a headline step back to grey instead of changing colour. */
+@utility text-gradient {
+  color: var(--subtle);
+}
+
+/* A dot grid for empty areas. */
+@utility bg-grid {
+  background-image: radial-gradient(var(--line-strong) 1px, transparent 1px);
+  background-size: 18px 18px;
+}
+
+/* ---------- Base ---------- */
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans), system-ui, sans-serif;
+  font-optical-sizing: auto;
+  font-feature-settings: "cv11", "ss01", "ss03";
 }
 
 h1,
@@ -82,6 +165,12 @@ p {
   text-wrap: pretty;
 }
 
+/* Display type: Inter at a heavier weight with tight tracking. */
+.font-display {
+  font-weight: 600;
+  letter-spacing: -0.035em;
+}
+
 /* Tailwind v4 resets buttons to the default cursor. */
 button:not(:disabled),
 [role="button"],
@@ -91,31 +180,66 @@ label:has(> input:not(:disabled)) {
 }
 
 ::selection {
-  background: color-mix(in oklab, var(--color-brand-500) 30%, transparent);
+  background: var(--foreground);
+  color: var(--background);
 }
 
 /* In the base layer so a field with its own focus style can turn it off with outline-none. */
 @layer base {
   :focus-visible {
-    outline: 2px solid var(--color-brand-500);
+    outline: 2px solid var(--foreground);
     outline-offset: 2px;
   }
 }
 
+/* Slim scrollbars that match the theme. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+}
+
 dialog::backdrop {
-  background: rgb(0 0 0 / 0.45);
+  background: rgb(0 0 0 / 0.5);
   backdrop-filter: blur(2px);
 }
+
+dialog[open] {
+  animation: pop-in 200ms var(--ease-out-expo);
+}
+
+/* ---------- Motion ----------
+ * Short and quiet: 150-250ms for feedback, 300-500ms for things entering.
+ * Everything is opacity and transform, and all of it switches off under
+ * prefers-reduced-motion at the bottom of this file.
+ */
 
 @keyframes fade-up {
   from {
     opacity: 0;
-    transform: translateY(4px);
+    transform: translateY(8px);
+    filter: blur(2px);
   }
 }
 
 .animate-fade-up {
-  animation: fade-up 180ms ease-out;
+  animation: fade-up 420ms var(--ease-out-expo) both;
+}
+
+/* Lists stagger in: set --i on each item. */
+.stagger > * {
+  animation: fade-up 420ms var(--ease-out-expo) both;
+  animation-delay: calc(min(var(--i, 0), 12) * 35ms);
+}
+
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.98);
+  }
+}
+
+.animate-pop-in {
+  animation: pop-in 200ms var(--ease-out-expo) both;
 }
 
 /* The Ask Claude panel slides in from the right. */
@@ -127,7 +251,166 @@ dialog::backdrop {
 }
 
 .animate-slide-in {
-  animation: slide-in 200ms cubic-bezier(0.22, 1, 0.36, 1);
+  animation: slide-in 260ms var(--ease-out-expo);
+}
+
+/* Score rings draw in from empty to their value. */
+@keyframes ring-draw {
+  from {
+    stroke-dasharray: 0 999;
+  }
+}
+
+.animate-ring-draw {
+  animation: ring-draw 1000ms var(--ease-out-expo) both;
+}
+
+@keyframes indeterminate {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(300%);
+  }
+}
+
+@keyframes orbit {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes breathe {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.5;
+  }
+  50% {
+    transform: scale(1.06);
+    opacity: 1;
+  }
+}
+
+/*
+ * The thought cloud's trailing bubbles. Each bubble rises and fades in turn, like
+ * a thought forming; used on the logo hover and while Claude is working.
+ */
+@keyframes think {
+  0%,
+  100% {
+    opacity: 0.25;
+    transform: translate(0, 0);
+  }
+  40% {
+    opacity: 1;
+    transform: translate(0.6px, -1.2px);
+  }
+}
+
+.thinking .bubble {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: think 1.4s var(--ease-out-quart) infinite;
+}
+
+.thinking .bubble-2 {
+  animation-delay: 180ms;
+}
+
+.thinking .bubble-3 {
+  animation-delay: 360ms;
+}
+
+/* On hover, the logo's bubbles drift up once. */
+@keyframes bubble-rise {
+  50% {
+    transform: translate(0.8px, -1.6px);
+  }
+}
+
+.group:hover .logo-bubbles .bubble {
+  transform-box: fill-box;
+  animation: bubble-rise 600ms var(--ease-out-expo);
+}
+
+.group:hover .logo-bubbles .bubble-2 {
+  animation-delay: 80ms;
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+/* Text that shimmers while Claude works on it. */
+.text-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--subtle) 0%,
+    var(--subtle) 40%,
+    var(--foreground) 50%,
+    var(--subtle) 60%,
+    var(--subtle) 100%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: shimmer 2.4s linear infinite;
+}
+
+/* Bars grow from the left to their width. */
+@keyframes grow-x {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+.animate-grow-x {
+  transform-origin: left;
+  animation: grow-x 800ms var(--ease-out-expo) both;
+}
+
+/* Three dots while a reply is on its way. */
+@keyframes typing {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.3;
+  }
+  30% {
+    transform: translateY(-3px);
+    opacity: 1;
+  }
+}
+
+.typing-dot {
+  animation: typing 1.2s ease-in-out infinite;
+}
+
+.typing-dot:nth-child(2) {
+  animation-delay: 150ms;
+}
+
+.typing-dot:nth-child(3) {
+  animation-delay: 300ms;
+}
+
+/* The nav's active underline draws out from the centre. */
+@keyframes underline-in {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+.animate-underline {
+  animation: underline-in 320ms var(--ease-out-expo) both;
 }
 
 /*
@@ -144,7 +427,7 @@ dialog::backdrop {
   }
 
   html:not([data-tutor-resizing]) .app-shell {
-    transition: padding-right 220ms cubic-bezier(0.22, 1, 0.36, 1);
+    transition: padding-right 260ms var(--ease-out-expo);
   }
 
   html[data-tutor-resizing] {
@@ -158,26 +441,8 @@ dialog::backdrop {
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
-  }
-}
-
-/* Score rings draw in from empty to their value (set via --dash). */
-@keyframes ring-draw {
-  from {
-    stroke-dasharray: 0 999;
-  }
-}
-
-.animate-ring-draw {
-  animation: ring-draw 900ms cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-@keyframes indeterminate {
-  from {
-    transform: translateX(-100%);
-  }
-  to {
-    transform: translateX(300%);
   }
 }

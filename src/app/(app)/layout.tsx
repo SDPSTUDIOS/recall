@@ -1,19 +1,21 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { Github } from "@/components/BrandIcons";
 import { ClaudeStatusBadge } from "@/components/ClaudeStatusBadge";
+import { CommandPalette, CommandTrigger } from "@/components/CommandPalette";
 import { LogoMark } from "@/components/Logo";
 import { NavLinks } from "@/components/NavLinks";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { SidebarUnits } from "@/components/units/SidebarUnits";
 
-function HomeLink({ className }: { className?: string }) {
+function HomeLink({ wordmark = "always" }: { wordmark?: "always" | "sm" }) {
   return (
-    <Link
-      href="/"
-      aria-label="Recall home"
-      className={`flex min-h-9 shrink-0 items-center gap-2 rounded-lg font-bold tracking-tight ${className ?? ""}`}
-    >
-      <LogoMark className="size-8 drop-shadow-sm" />
-      <span className="text-[17px]" aria-hidden>
+    <Link href="/" aria-label="Recall home" className="group flex min-h-9 shrink-0 items-center gap-2.5 rounded-md">
+      <LogoMark className="size-7" />
+      <span
+        className={`text-[15px] font-semibold tracking-tight ${wordmark === "sm" ? "hidden sm:inline" : ""}`}
+        aria-hidden
+      >
         Recall
       </span>
     </Link>
@@ -21,59 +23,81 @@ function HomeLink({ className }: { className?: string }) {
 }
 
 /**
- * Sidebar on large screens, a compact top bar below that. The welcome page has its own chrome.
- * Only one of the two navs is displayed at a time, so screen readers see a single "Main" nav.
+ * A full-height side panel on large screens; a top bar with tabs below that.
+ * Only one of the two navs is displayed at a time, so screen readers see a
+ * single "Main" nav. The welcome page has its own chrome.
  */
 export default function AppLayout({ children }: { children: ReactNode }) {
   return (
     <>
       <a
         href="#main"
-        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-3 focus:z-50 focus:rounded-lg focus:bg-brand-600 focus:px-3 focus:py-2 focus:text-sm focus:text-white"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-3 focus:z-50 focus:rounded-md focus:bg-foreground focus:px-3 focus:py-2 focus:text-sm focus:text-background"
       >
         Skip to content
       </a>
+      <CommandPalette />
 
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col border-r border-zinc-200/80 bg-white/75 backdrop-blur-md backdrop-saturate-150 lg:flex dark:border-zinc-800/80 dark:bg-zinc-950/75">
-        <div className="flex h-16 items-center px-5">
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col border-r border-line bg-background lg:flex">
+        <div className="flex h-14 items-center px-4">
           <HomeLink />
         </div>
-        <div className="flex-1 overflow-y-auto px-3 py-2">
-          <NavLinks variant="sidebar" />
+        <div className="px-3 pt-1 pb-4">
+          <CommandTrigger />
         </div>
-        <div className="space-y-3 border-t border-zinc-200/80 p-4 dark:border-zinc-800/80">
-          <ClaudeStatusBadge className="w-full" />
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-xs font-medium text-muted">Theme</span>
+        <div className="flex-1 overflow-y-auto px-3">
+          <div className="px-2.5 pb-1.5 text-xs text-subtle">Workspace</div>
+          <NavLinks variant="sidebar" />
+          <SidebarUnits />
+        </div>
+        <div className="space-y-1 border-t border-line p-3">
+          <ClaudeStatusBadge detailed className="-mx-0.5" />
+          <div className="flex items-center justify-between gap-2 px-2.5 pt-1">
+            <span className="text-xs text-subtle">Theme</span>
             <ThemeToggle />
           </div>
         </div>
       </aside>
 
       <div className="app-shell flex min-h-full flex-1 flex-col lg:pl-60">
-        <header className="sticky top-0 z-30 border-b border-zinc-200/80 bg-white/75 backdrop-blur-md backdrop-saturate-150 lg:hidden dark:border-zinc-800/80 dark:bg-zinc-950/75">
-          <div className="mx-auto flex h-14 max-w-5xl items-center gap-3 px-4">
-            <HomeLink className="[&>span]:hidden sm:[&>span]:inline" />
-            <span className="mx-1 hidden h-5 w-px bg-zinc-200 sm:block dark:bg-zinc-800" />
+        <header className="sticky top-0 z-30 border-b border-line bg-background/85 backdrop-blur-md lg:hidden">
+          <div className="mx-auto flex h-14 max-w-6xl items-center gap-3 px-4 sm:gap-6 sm:px-6">
+            <HomeLink wordmark="sm" />
             <NavLinks />
             <div className="ml-auto flex items-center gap-2">
+              <CommandTrigger compact />
               <ClaudeStatusBadge />
-              <ThemeToggle />
             </div>
           </div>
         </header>
-        <main id="main" className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 lg:px-8 lg:py-10">
+
+        <main id="main" className="mx-auto w-full max-w-6xl flex-1 px-4 py-10 sm:px-6 lg:px-10 lg:py-14">
           {children}
         </main>
-        <footer className="border-t border-zinc-200 dark:border-zinc-800">
-          <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-2 px-4 py-5 text-xs text-muted lg:px-8">
-            <span>Recall · open source, runs locally on your Claude subscription</span>
-            <Link
-              href="/setup"
-              className="font-medium underline-offset-4 hover:text-zinc-800 hover:underline lg:hidden dark:hover:text-zinc-200"
-            >
-              Setup & help
-            </Link>
+
+        <footer className="border-t border-line">
+          <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-5 text-[13px] text-subtle sm:px-6 lg:px-10">
+            <span className="inline-flex items-center gap-2">
+              <LogoMark className="size-4" />
+              Open source. Runs on your computer with your Claude subscription.
+            </span>
+            <span className="flex items-center gap-5">
+              <Link href="/setup" className="underline-offset-4 transition-colors hover:text-foreground hover:underline">
+                Help
+              </Link>
+              <a
+                href="https://github.com/SDPSTUDIOS/recall"
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1.5 underline-offset-4 transition-colors hover:text-foreground hover:underline"
+              >
+                <Github className="size-3.5" /> GitHub
+              </a>
+              {/* The side panel has its own theme switch. */}
+              <span className="lg:hidden">
+                <ThemeToggle />
+              </span>
+            </span>
           </div>
         </footer>
       </div>

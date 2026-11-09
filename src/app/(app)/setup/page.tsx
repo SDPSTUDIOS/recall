@@ -2,25 +2,31 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { Plus } from "lucide-react";
 import { CopyCommand, SetupChecklist } from "@/components/SetupChecklist";
+import { PageHeader } from "@/components/ui";
 
 export const metadata: Metadata = { title: "Setup & help" };
 
 export default function SetupPage() {
   return (
-    <div className="mx-auto max-w-2xl space-y-10">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Connect Claude</h1>
-        <p className="mt-1 text-zinc-600 dark:text-zinc-400">
-          Recall runs on your own computer and uses your Claude subscription through Claude
-          Code. Setup takes about two minutes.
-        </p>
-      </div>
+    <div className="mx-auto max-w-2xl space-y-12">
+      <PageHeader
+        eyebrow="Setup & help"
+        title={
+          <h1 className="font-display text-4xl leading-[1.05] sm:text-5xl">
+            Connect <span className="text-subtle">Claude</span>
+          </h1>
+        }
+        description="Recall runs on your own computer and uses your Claude subscription through Claude Code. Setup takes about two minutes."
+      />
 
       <SetupChecklist />
 
       <section className="space-y-3">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">Questions</h2>
-        <div className="divide-y divide-zinc-200 rounded-xl border border-zinc-200 bg-white dark:divide-zinc-800 dark:border-zinc-800 dark:bg-zinc-900">
+        <h2 className="flex items-center gap-3">
+          <span className="text-sm font-semibold">Questions</span>
+          <span aria-hidden className="h-px flex-1 bg-line" />
+        </h2>
+        <div className="surface divide-y divide-line overflow-hidden rounded-xl">
           <Faq q="Does it cost anything?">
             No extra cost. Requests use your Claude Pro or Max plan and count toward its usage
             limits, like using Claude Code yourself. Haiku and Text mode use the least.
@@ -54,18 +60,20 @@ export default function SetupPage() {
 
 function Faq({ q, children }: { q: string; children: ReactNode }) {
   return (
-    <details className="group px-4 py-3.5">
-      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-medium [&::-webkit-details-marker]:hidden">
+    <details className="group">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-4 text-[15px] font-medium transition-colors hover:bg-sunken [&::-webkit-details-marker]:hidden">
         {q}
-        <Plus className="size-4 shrink-0 text-subtle transition-transform duration-200 group-open:rotate-45" aria-hidden />
+        <span className="grid size-7 shrink-0 place-items-center rounded-full ring-1 ring-inset ring-line transition-[transform,background-color] duration-300 group-open:rotate-45 group-open:bg-foreground group-open:text-background">
+          <Plus className="size-3.5 text-subtle" aria-hidden />
+        </span>
       </summary>
-      <div className="mt-2 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">{children}</div>
+      <div className="animate-fade-up px-5 pb-5 text-sm leading-relaxed text-muted">{children}</div>
     </details>
   );
 }
 
 function Code({ children }: { children: ReactNode }) {
   return (
-    <code className="rounded bg-zinc-100 px-1 py-0.5 font-mono text-[0.85em] dark:bg-zinc-800">{children}</code>
+    <code className="rounded-md bg-zinc-100 px-1.5 py-0.5 font-mono text-[0.85em] text-zinc-800 ring-1 ring-inset ring-line dark:text-zinc-200">{children}</code>
   );
 }

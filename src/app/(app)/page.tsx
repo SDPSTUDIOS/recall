@@ -1,27 +1,29 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { io } from "next/cache";
-import { FileText, Layers, ListChecks, Sparkles, Target, Upload } from "lucide-react";
+import { ArrowRight, Layers } from "lucide-react";
 import { QuizList } from "@/components/QuizList";
 import { SetupBanner } from "@/components/SetupBanner";
 import { UploadDropzone } from "@/components/UploadDropzone";
-import { Badge, Card, PageLoading, SectionTitle, buttonClass } from "@/components/ui";
-import { formatRelative, isLowText } from "@/lib/format";
-import { attemptStats, listDocuments, listQuizzes } from "@/lib/repo";
+import { UnitGrid } from "@/components/units/UnitGrid";
+import { Eyebrow, Meter, PageLoading, SectionTitle, buttonClass } from "@/components/ui";
+import { attemptStats, listDocuments, listQuizzes, listUnits } from "@/lib/repo";
+import type { QuizRecord } from "@/lib/types";
 
 export default function Home() {
   return (
-    <div className="space-y-10">
+    <div className="space-y-14">
       <SetupBanner />
-      <section className="space-y-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
-            Turn lectures into{" "}
-            <span className="text-brand-600 dark:text-brand-400">practice exams</span>
+      <section className="space-y-8">
+        <div className="animate-fade-up">
+          <h1 className="font-display text-4xl leading-[1.05] sm:text-[3.25rem]">
+            Turn lectures into
+            <br />
+            <span className="text-subtle">practice exams.</span>
           </h1>
-          <p className="mt-2 max-w-2xl leading-relaxed text-zinc-600 dark:text-zinc-400">
-            Upload your lecture PDFs and Claude writes multiple choice, fill in the blank, long
-            answer and code questions from them, then grades your answers.
+          <p className="mt-5 max-w-xl text-[15px] leading-relaxed text-muted">
+            Upload your lecture PDFs. Claude writes multiple choice, fill in the blank, long answer and code questions
+            from them, then grades your answers.
           </p>
         </div>
         <UploadDropzone />
@@ -40,70 +42,61 @@ async function Library() {
   const quizzes = listQuizzes();
   const stats = attemptStats();
 
-  if (documents.length === 0 && quizzes.length === 0) return <HowItWorks />;
+  const units = listUnits();
+  if (units.length === 0 && quizzes.length === 0) return <HowItWorks />;
 
   const attempted = Object.values(stats);
   const attemptCount = attempted.reduce((n, s) => n + s.count, 0);
-  const avgBest = attempted.length
-    ? Math.round((attempted.reduce((n, s) => n + s.best, 0) / attempted.length) * 100)
-    : null;
+  const avgBest = attempted.length ? attempted.reduce((n, s) => n + s.best, 0) / attempted.length : null;
 
   return (
     <>
       {quizzes.length > 0 && (
-        <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <Stat icon={<FileText className="size-4" />} tone="red" label="Materials" value={documents.length} />
-          <Stat icon={<ListChecks className="size-4" />} tone="brand" label="Question sets" value={quizzes.length} />
-          <Stat icon={<Sparkles className="size-4" />} tone="amber" label="Attempts" value={attemptCount} />
-          <Stat
-            icon={<Target className="size-4" />}
-            tone="green"
-            label="Average best score"
-            value={avgBest === null ? "–" : `${avgBest}%`}
-          />
+        <section
+          aria-label="Overview"
+          className="animate-fade-up grid overflow-hidden rounded-xl border border-line [animation-delay:120ms] sm:grid-cols-2 lg:grid-cols-4"
+        >
+          <UpNext quizzes={quizzes} stats={stats} />
+          <div className="flex flex-col justify-between gap-6 border-t border-line p-5 lg:border-t-0 lg:border-l">
+            <Eyebrow>Average best</Eyebrow>
+            <div>
+              <div className="font-display text-4xl tabular-nums">
+                {avgBest === null ? "–" : `${Math.round(avgBest * 100)}%`}
+              </div>
+              {avgBest !== null && <Meter value={avgBest} className="mt-3" />}
+              <div className="mt-2 text-[13px] text-subtle">
+                {attempted.length === 0
+                  ? "Take a set to see your score"
+                  : `Across ${attempted.length} attempted ${attempted.length === 1 ? "set" : "sets"}`}
+              </div>
+            </div>
+          </div>
+          <dl className="grid grid-cols-3 border-t border-line sm:grid-cols-1 sm:border-l lg:border-t-0">
+            <Stat label="Units" value={units.length} />
+            <Stat label="Materials" value={documents.length} />
+            <Stat label="Attempts" value={attemptCount} />
+          </dl>
         </section>
       )}
 
-      <section className="space-y-3">
+      <section className="space-y-4">
         <SectionTitle
+          count={units.length}
           action={
             documents.length > 1 && (
-              <Link href="/generate" className={buttonClass("secondary", "py-1.5")}>
+              <Link href="/generate" className={buttonClass("ghost", "min-h-8 px-2.5 py-1")}>
                 <Layers className="size-4" /> Combine materials
               </Link>
             )
           }
         >
-          Lecture materials
+          Units
         </SectionTitle>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {documents.map((d) => (
-            <Link key={d.id} href={`/documents/${d.id}`} className="group rounded-xl">
-              <Card className="flex h-full gap-3 p-4 transition duration-200 group-hover:-translate-y-0.5 group-hover:border-brand-300 group-hover:shadow-md group-hover:shadow-brand-600/5 dark:group-hover:border-brand-800">
-                <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-red-50 text-red-600 dark:bg-red-950/60 dark:text-red-400">
-                  <FileText className="size-5" />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <div className="truncate font-medium" title={d.name}>
-                    {d.name}
-                  </div>
-                  <div className="mt-0.5 text-xs text-muted">
-                    {d.pageCount} pages ·{" "}
-                    {d.quizCount === 0 ? "no sets yet" : `${d.quizCount} ${d.quizCount === 1 ? "set" : "sets"}`}
-                  </div>
-                  <div className="mt-1.5 flex items-center gap-1.5">
-                    <span className="text-xs text-subtle">{formatRelative(d.createdAt)}</span>
-                    {isLowText(d) && <Badge tone="amber">Scanned</Badge>}
-                  </div>
-                </div>
-              </Card>
-            </Link>
-          ))}
-        </div>
+        <UnitGrid units={units} />
       </section>
 
-      <section className="space-y-3">
-        <SectionTitle>Question sets</SectionTitle>
+      <section className="space-y-4">
+        <SectionTitle count={quizzes.length}>Question sets</SectionTitle>
         <QuizList
           quizzes={quizzes}
           stats={stats}
@@ -115,78 +108,101 @@ async function Library() {
   );
 }
 
-const STAT_TONES = {
-  red: "bg-red-50 text-red-600 dark:bg-red-950/60 dark:text-red-400",
-  brand: "bg-brand-50 text-brand-600 dark:bg-brand-950 dark:text-brand-300",
-  amber: "bg-amber-50 text-amber-600 dark:bg-amber-950/60 dark:text-amber-400",
-  green: "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400",
-};
-
-function Stat({
-  icon,
-  tone,
-  label,
-  value,
-}: {
-  icon: React.ReactNode;
-  tone: keyof typeof STAT_TONES;
-  label: string;
-  value: string | number;
-}) {
+function Stat({ label, value }: { label: string; value: number }) {
   return (
-    <Card className="flex items-center gap-3 p-4">
-      <span className={`grid size-9 shrink-0 place-items-center rounded-lg ${STAT_TONES[tone]}`} aria-hidden>
-        {icon}
-      </span>
-      <div className="min-w-0">
-        <div className="text-2xl font-bold leading-tight tabular-nums tracking-tight">{value}</div>
-        <div className="truncate text-xs text-muted">{label}</div>
+    <div className="flex flex-col justify-center gap-0.5 border-line px-5 py-3.5 not-first:border-l sm:not-first:border-t sm:not-first:border-l-0">
+      <dt className="text-[13px] text-subtle">{label}</dt>
+      <dd className="font-mono text-lg font-medium tabular-nums">{value}</dd>
+    </div>
+  );
+}
+
+/** What to do next: revise the weakest set, start a fresh one, or make one. */
+function UpNext({ quizzes, stats }: { quizzes: QuizRecord[]; stats: Record<string, { best: number; count: number }> }) {
+  const ready = quizzes.filter((q) => q.status === "ready");
+  const weakest = ready
+    .filter((q) => stats[q.id] && stats[q.id].best < 0.8)
+    .sort((a, b) => stats[a.id].best - stats[b.id].best)[0];
+  const fresh = ready.find((q) => !stats[q.id]);
+  const generating = quizzes.find((q) => q.status === "generating");
+
+  const pick: { eyebrow: string; title: string; text: string; cta: string; href: string } = weakest
+    ? {
+        eyebrow: "Up next · revise",
+        title: weakest.title,
+        text: `Your best is ${Math.round(stats[weakest.id].best * 100)}%. Another go will close the gaps.`,
+        cta: "Practise again",
+        href: `/quizzes/${weakest.id}`,
+      }
+    : fresh
+      ? {
+          eyebrow: "Up next · new",
+          title: fresh.title,
+          text: `${fresh.questions.length} questions you haven't tried yet.`,
+          cta: "Start set",
+          href: `/quizzes/${fresh.id}`,
+        }
+      : generating
+        ? {
+            eyebrow: "In progress",
+            title: generating.title,
+            text: "Claude is writing this set now.",
+            cta: "View progress",
+            href: `/quizzes/${generating.id}`,
+          }
+        : {
+            eyebrow: "Up next",
+            title: "Every set is above 80%",
+            text: "Build a new set to keep stretching, or combine several lectures into one exam.",
+            cta: "New set",
+            href: "/generate",
+          };
+
+  return (
+    <Link
+      href={pick.href}
+      className="group flex flex-col justify-between gap-8 bg-foreground p-5 text-background sm:col-span-2 sm:p-6"
+    >
+      <div>
+        <div className="font-mono text-xs opacity-60">{pick.eyebrow}</div>
+        <div className="font-display mt-3 line-clamp-2 text-2xl leading-tight">{pick.title}</div>
+        <p className="mt-1.5 text-sm opacity-70">{pick.text}</p>
       </div>
-    </Card>
+      <span className="inline-flex items-center gap-1.5 text-sm font-medium">
+        {pick.cta}
+        <ArrowRight className="size-4 transition-transform duration-300 ease-(--ease-out-expo) group-hover:translate-x-1" />
+      </span>
+    </Link>
   );
 }
 
 function HowItWorks() {
   const steps = [
     {
-      icon: <Upload className="size-5" />,
-      title: "Upload lectures",
-      text: "Drop in slides, notes or handouts as PDFs. They stay on your computer.",
+      title: "Add a unit and its lectures",
+      text: "Create a unit for each course, then drop in its slides, notes or handouts as PDFs. They stay on your computer.",
     },
     {
-      icon: <Sparkles className="size-5" />,
       title: "Generate a set",
       text: "Pick the question types, difficulty and Claude model. Combine several lectures into one exam.",
     },
     {
-      icon: <Target className="size-5" />,
       title: "Practise and get graded",
       text: "Take it as an exam or check answers as you go. Claude marks written answers with feedback.",
     },
   ];
   return (
-    <section className="space-y-3">
+    <section className="space-y-4">
       <SectionTitle>How it works</SectionTitle>
-      <div className="grid gap-3 sm:grid-cols-3">
+      <ol className="stagger grid gap-8 pt-2 sm:grid-cols-3">
         {steps.map((s, i) => (
-          <Card key={s.title} className="relative overflow-hidden p-5">
-            <span
-              aria-hidden
-              className="absolute -right-2 -top-4 text-7xl font-bold tabular-nums text-zinc-100 dark:text-zinc-800/60"
-            >
-              {i + 1}
-            </span>
-            <div className="relative flex items-center gap-3">
-              <span className="grid size-10 place-items-center rounded-lg bg-brand-50 text-brand-600 dark:bg-brand-950 dark:text-brand-300">
-                {s.icon}
-              </span>
-              <span className="text-xs font-semibold uppercase tracking-wide text-subtle">Step {i + 1}</span>
-            </div>
-            <div className="relative mt-3 font-semibold">{s.title}</div>
-            <p className="relative mt-1 text-sm leading-relaxed text-muted">{s.text}</p>
-          </Card>
+          <li key={s.title} style={{ "--i": i } as React.CSSProperties}>
+            <div className="font-mono text-xs text-subtle">0{i + 1}</div>
+            <div className="mt-3 text-[15px] font-semibold">{s.title}</div>
+            <p className="mt-1 text-sm leading-relaxed text-muted">{s.text}</p>
+          </li>
         ))}
-      </div>
+      </ol>
     </section>
   );
 }

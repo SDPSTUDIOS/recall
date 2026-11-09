@@ -12,7 +12,7 @@ const ICONS: Record<CheckState, React.ReactNode> = {
   pass: <CheckCircle2 className="size-5 text-emerald-600 dark:text-emerald-400" aria-hidden />,
   warn: <AlertTriangle className="size-5 text-amber-600 dark:text-amber-400" aria-hidden />,
   fail: <XCircle className="size-5 text-red-600 dark:text-red-400" aria-hidden />,
-  pending: <span className="block size-5 rounded-full border-2 border-dashed border-zinc-300 dark:border-zinc-700" aria-hidden />,
+  pending: <span className="block size-5 rounded-full border-2 border-dashed border-zinc-900/20 dark:border-white/20" aria-hidden />,
 };
 
 const STATE_TEXT: Record<CheckState, string> = {
@@ -62,14 +62,14 @@ export function EligibilityCard() {
 
   return (
     <Card className="overflow-hidden">
-      <div className="border-b border-zinc-200 px-5 py-4 sm:px-6 dark:border-zinc-800">
+      <div className="border-b border-line px-5 py-5 sm:px-6">
         <div className="flex items-center justify-between gap-3">
-          <h2 className="font-semibold">Check your setup</h2>
+          <h2 className="text-base font-semibold">Check your setup</h2>
           <button
             type="button"
             onClick={recheck}
             disabled={loading}
-            className="inline-flex min-h-8 items-center gap-1.5 rounded-md px-2 text-sm font-medium text-muted transition-colors hover:bg-zinc-100 hover:text-zinc-900 disabled:opacity-50 pointer-coarse:min-h-10 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+            className="inline-flex min-h-8 items-center gap-1.5 rounded-lg px-2.5 text-sm font-medium text-muted transition-colors hover:bg-zinc-100 hover:text-zinc-900 disabled:opacity-50 pointer-coarse:min-h-10 dark:hover:bg-zinc-900 dark:hover:text-zinc-100"
           >
             <RefreshCw className={cx("size-3.5", checking && "animate-spin")} aria-hidden />
             Check again
@@ -80,7 +80,7 @@ export function EligibilityCard() {
         </p>
       </div>
 
-      <ol className="divide-y divide-zinc-100 dark:divide-zinc-800">
+      <ol className="divide-y divide-line">
         {checks.map((c) => (
           <li key={c.id} className="flex gap-3 px-5 py-4 sm:px-6">
             <span className="mt-px shrink-0">
@@ -117,7 +117,7 @@ export function EligibilityCard() {
         ))}
       </ol>
 
-      <div className="space-y-3 border-t border-zinc-200 bg-zinc-50 px-5 py-4 sm:px-6 dark:border-zinc-800 dark:bg-zinc-900/60">
+      <div className="space-y-3 border-t border-line bg-sunken px-5 py-4 sm:px-6">
         {error && <ErrorText>{error}</ErrorText>}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="max-w-xs text-xs text-muted">

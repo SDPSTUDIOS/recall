@@ -52,6 +52,8 @@ export interface ClaudeRunOptions {
   /** Built-in tools to enable. Empty = no tools (pure text in, JSON out). */
   tools?: string[];
   cwd?: string;
+  /** cwd holds files we didn't write (e.g. a cloned repository): load only the user's own settings, never its project settings. */
+  untrustedCwd?: boolean;
   timeoutMs?: number;
 }
 
@@ -159,6 +161,7 @@ export async function runClaude<T>(opts: ClaudeRunOptions): Promise<ClaudeRunRes
     "--strict-mcp-config",
   );
   if (opts.effort && opts.effort !== "default") args.push("--effort", opts.effort);
+  if (opts.untrustedCwd) args.push("--setting-sources", "user");
 
   const started = Date.now();
   const { stdout, stderr, code } = await exec(args, {

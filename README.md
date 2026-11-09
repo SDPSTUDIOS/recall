@@ -27,6 +27,7 @@ It runs on your own computer and uses your **Claude Pro or Max subscription** th
 - **Grading and feedback:** objective questions are marked instantly. Written answers are marked by Claude against a rubric, with covered and missed points. Results show weak topics to review.
 - **Any Claude model:** Sonnet, Opus, Fable, Haiku or a specific model ID, with adjustable effort.
 - **Text or Visual reading:** Visual mode lets Claude look at the pages themselves, for scanned slides, diagrams, graphs and equations shown as images.
+- **Viva practice:** paste a GitHub repository link (public or private) or upload a zip of your project, and Claude reads the code, then examines you on it in a text-based viva. It asks one question at a time, follows up on your answers and quotes your code. At the end you get a score and feedback for each topic. Progress is saved, so you can leave and come back, and you can retake a viva.
 - Light and dark themes, renameable materials and sets, and attempt history with score trends.
 
 ## Quick start
@@ -66,6 +67,7 @@ There is no Recall account or sign-in. It's open source and runs entirely on you
 | Artifacts | Claude takes an artifact from the material, or creates one that applies what it teaches, and asks you to work with it. Equations are LaTeX rendered with KaTeX; graphs (line, scatter or bar) are drawn from data series, with hover values and a data table; tables, case studies and code are shown as they are. |
 | Visual mode | The selected pages are split into PDFs of up to 10 pages each, and Claude reads them with its Read tool, so it also sees diagrams and scanned slides. |
 | Grading | Multiple choice, single choice and fill-in-the-blank are graded instantly in code. Long answers and code answers are sent to Claude in one batch with the model answer and marking points. |
+| Viva | A GitHub repository is shallow-cloned with `git` into a temporary folder; an uploaded zip (up to 100 MB) is unpacked there instead, skipping dependencies, build output and binaries, refusing any path that would land outside the folder, and capping total size against zip bombs. The zip is deleted once the viva is prepared. Claude explores it with read-only tools (Read, Glob, Grep) and plans the topics, each with an opening question, the relevant code and what a strong answer covers. The clone is deleted afterwards. Each examiner reply is streamed from that plan and the saved transcript. The planned questions stay on the server until the viva is assessed. Needs Git installed. For a private repository, Recall asks you to sign in to GitHub (or paste an access token). The token is used for that one download and is never saved: it's passed to Git in memory, and Git's credential helpers are switched off for the download. |
 | Storage | Everything lives in a local SQLite database at `data/exam-helper.db`. |
 
 ## Configuration
@@ -75,7 +77,22 @@ Optional `.env.local`:
 ```bash
 # Full path to the Claude Code executable if `claude` isn't on PATH
 CLAUDE_BIN=C:\Users\you\.local\bin\claude.exe
+
+# Client ID of a GitHub OAuth App, for "Sign in with GitHub" on private repositories (viva)
+GITHUB_CLIENT_ID=Ov23li...
 ```
+
+### Private repositories for vivas
+
+Without any setup, a private repository asks for a GitHub access token. A [fine-grained token](https://github.com/settings/personal-access-tokens/new) with read-only **Contents** access to that repository and a short expiry is the safest choice.
+
+For a **Sign in with GitHub** button instead, which shows a code to enter at github.com/login/device:
+
+1. Create an OAuth App at [github.com/settings/developers](https://github.com/settings/developers). The homepage and callback URL can both be `http://localhost:3000`; the callback isn't used.
+2. Tick **Enable Device Flow** in the app's settings.
+3. Put its **Client ID** in `.env.local` as `GITHUB_CLIENT_ID` and restart Recall. No client secret is needed.
+
+OAuth Apps can only get the `repo` scope for private repositories, which is broader than read-only. Recall uses the token once and doesn't keep it. To withdraw the authorisation entirely, revoke the app under GitHub's *Settings → Applications → Authorized OAuth Apps*. Organisation repositories may need the organisation to approve the app first.
 
 `ANTHROPIC_API_KEY` is deliberately removed from the CLI's environment, so usage always goes to your subscription login and never to pay-per-use API billing.
 

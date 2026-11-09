@@ -1,5 +1,6 @@
 import "server-only";
 import Database from "better-sqlite3";
+import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { shuffleOptions } from "./shuffle";
@@ -148,6 +149,55 @@ const MIGRATIONS: ((db: Database.Database) => void)[] = [
         PRIMARY KEY (quiz_id, question_id)
       );
     `);
+  },
+  // 4: viva sessions on a GitHub repository.
+  (db) => {
+    db.exec(`
+      CREATE TABLE vivas (
+        id            TEXT PRIMARY KEY,
+        repo_url      TEXT NOT NULL,
+        repo_name     TEXT NOT NULL,
+        branch        TEXT,
+        commit_sha    TEXT,
+        title         TEXT NOT NULL,
+        status        TEXT NOT NULL,
+        error         TEXT,
+        config_json   TEXT NOT NULL,
+        brief_json    TEXT,
+        messages_json TEXT NOT NULL DEFAULT '[]',
+        topic_index   INTEGER NOT NULL DEFAULT 0,
+        ended         INTEGER NOT NULL DEFAULT 0,
+        result_json   TEXT,
+        model_used    TEXT,
+        duration_ms   INTEGER,
+        created_at    INTEGER NOT NULL,
+        started_at    INTEGER NOT NULL,
+        completed_at  INTEGER
+      );
+    `);
+  },
+  // 5: a viva can be on an uploaded zip instead of a GitHub repository.
+  (db) => {
+    db.exec(`ALTER TABLE vivas ADD COLUMN source TEXT NOT NULL DEFAULT 'github';`);
+  },
+  // 6: course units. Every document belongs to one; existing documents go into "Unsorted".
+  (db) => {
+    db.exec(`
+      CREATE TABLE units (
+        id         TEXT PRIMARY KEY,
+        name       TEXT NOT NULL,
+        code       TEXT,
+        created_at INTEGER NOT NULL
+      );
+      ALTER TABLE documents ADD COLUMN unit_id TEXT REFERENCES units(id) ON DELETE CASCADE;
+      CREATE INDEX idx_documents_unit ON documents(unit_id);
+    `);
+    const docs = db.prepare("SELECT COUNT(*) AS n FROM documents").get() as { n: number };
+    if (docs.n > 0) {
+      const id = randomUUID();
+      db.prepare("INSERT INTO units (id, name, code, created_at) VALUES (?, 'Unsorted', NULL, ?)").run(id, Date.now());
+      db.prepare("UPDATE documents SET unit_id = ?").run(id);
+    }
   },
 ];
 

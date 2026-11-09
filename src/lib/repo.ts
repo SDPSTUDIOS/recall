@@ -9,10 +9,20 @@ import type {
   QuizStatus,
   TutorChats,
   TutorMessage,
+  UnitRecord,
+  UnitSummary,
+  VivaBrief,
+  VivaConfig,
+  VivaMessage,
+  VivaRecord,
+  VivaResult,
+  VivaSource,
+  VivaStatus,
 } from "./types";
 
 interface DocumentRow {
   id: string;
+  unit_id: string;
   name: string;
   file_name: string;
   size: number;
@@ -47,6 +57,7 @@ interface AttemptRow {
 
 const toDocument = (r: DocumentRow): DocumentRecord => ({
   id: r.id,
+  unitId: r.unit_id,
   name: r.name,
   fileName: r.file_name,
   size: r.size,
@@ -80,17 +91,87 @@ const toAttempt = (r: AttemptRow): AttemptRecord => ({
   createdAt: r.created_at,
 });
 
+// ---------- units ----------
+
+interface UnitRow {
+  id: string;
+  name: string;
+  code: string | null;
+  created_at: number;
+}
+
+const toUnit = (r: UnitRow): UnitRecord => ({ id: r.id, name: r.name, code: r.code, createdAt: r.created_at });
+
+/** Units with their material, page and question set counts, most recently created first. */
+export function listUnits(): UnitSummary[] {
+  const rows = db
+    .prepare(
+      `SELECT u.*,
+         (SELECT COUNT(*) FROM documents d WHERE d.unit_id = u.id) AS document_count,
+         (SELECT COALESCE(SUM(page_count), 0) FROM documents d WHERE d.unit_id = u.id) AS page_count,
+         (SELECT COUNT(DISTINCT qd.quiz_id) FROM quiz_documents qd JOIN documents d ON d.id = qd.document_id
+            WHERE d.unit_id = u.id) AS quiz_count
+       FROM units u ORDER BY u.created_at DESC`,
+    )
+    .all() as (UnitRow & { document_count: number; page_count: number; quiz_count: number })[];
+  return rows.map((r) => ({
+    ...toUnit(r),
+    documentCount: r.document_count,
+    pageCount: r.page_count,
+    quizCount: r.quiz_count,
+  }));
+}
+
+export function getUnit(id: string): UnitRecord | null {
+  const row = db.prepare("SELECT * FROM units WHERE id = ?").get(id) as UnitRow | undefined;
+  return row ? toUnit(row) : null;
+}
+
+export function insertUnit(unit: UnitRecord) {
+  db.prepare("INSERT INTO units (id, name, code, created_at) VALUES (?, ?, ?, ?)").run(
+    unit.id,
+    unit.name,
+    unit.code,
+    unit.createdAt,
+  );
+}
+
+export function updateUnit(id: string, fields: { name?: string; code?: string | null }): boolean {
+  const unit = getUnit(id);
+  if (!unit) return false;
+  db.prepare("UPDATE units SET name = ?, code = ? WHERE id = ?").run(
+    fields.name ?? unit.name,
+    fields.code !== undefined ? fields.code : unit.code,
+    id,
+  );
+  return true;
+}
+
+/**
+ * Deletes a unit, its documents and the question sets made only from them.
+ * Returns the stored file names so the caller can remove the PDFs from disk.
+ */
+export const deleteUnit = db.transaction((id: string): string[] => {
+  const docs = db.prepare("SELECT id, file_name FROM documents WHERE unit_id = ?").all(id) as {
+    id: string;
+    file_name: string;
+  }[];
+  for (const d of docs) deleteDocument(d.id);
+  db.prepare("DELETE FROM units WHERE id = ?").run(id);
+  return docs.map((d) => d.file_name);
+});
+
 // ---------- documents ----------
 
-const DOC_COLUMNS = "id, name, file_name, size, page_count, char_count, created_at";
+const DOC_COLUMNS = "id, unit_id, name, file_name, size, page_count, char_count, created_at";
 
-export function listDocuments(): (DocumentRecord & { quizCount: number })[] {
+export function listDocuments(unitId?: string): (DocumentRecord & { quizCount: number })[] {
   const rows = db
     .prepare(
       `SELECT ${DOC_COLUMNS}, (SELECT COUNT(*) FROM quiz_documents qd WHERE qd.document_id = d.id) AS quiz_count
-       FROM documents d ORDER BY created_at DESC`,
+       FROM documents d ${unitId ? "WHERE unit_id = ?" : ""} ORDER BY created_at DESC`,
     )
-    .all() as (DocumentRow & { quiz_count: number })[];
+    .all(...(unitId ? [unitId] : [])) as (DocumentRow & { quiz_count: number })[];
   return rows.map((r) => ({ ...toDocument(r), quizCount: r.quiz_count }));
 }
 
@@ -121,10 +202,11 @@ export function getDocumentPages(id: string): string[] {
 
 export function insertDocument(doc: DocumentRecord, pages: string[]) {
   db.prepare(
-    `INSERT INTO documents (id, name, file_name, size, page_count, char_count, pages_json, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO documents (id, unit_id, name, file_name, size, page_count, char_count, pages_json, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   ).run(
     doc.id,
+    doc.unitId,
     doc.name,
     doc.fileName,
     doc.size,
@@ -146,6 +228,10 @@ export const deleteDocument = db.transaction((id: string) => {
 
 export function renameDocument(id: string, name: string): boolean {
   return db.prepare("UPDATE documents SET name = ? WHERE id = ?").run(name, id).changes > 0;
+}
+
+export function moveDocument(id: string, unitId: string): boolean {
+  return db.prepare("UPDATE documents SET unit_id = ? WHERE id = ?").run(unitId, id).changes > 0;
 }
 
 // ---------- quizzes ----------
@@ -188,6 +274,19 @@ export function listQuizzes(documentId?: string): QuizRecord[] {
           .all(documentId)
       : db.prepare("SELECT * FROM quizzes ORDER BY created_at DESC LIMIT 20").all()
   ) as QuizRow[];
+  return withDocuments(rows);
+}
+
+/** Question sets that use at least one document from the unit. */
+export function listUnitQuizzes(unitId: string): QuizRecord[] {
+  expireStaleGenerations();
+  const rows = db
+    .prepare(
+      `SELECT * FROM quizzes WHERE id IN (
+         SELECT qd.quiz_id FROM quiz_documents qd JOIN documents d ON d.id = qd.document_id WHERE d.unit_id = ?
+       ) ORDER BY created_at DESC`,
+    )
+    .all(unitId) as QuizRow[];
   return withDocuments(rows);
 }
 
@@ -297,4 +396,139 @@ export function saveTutorChat(quizId: string, questionId: string, messages: Tuto
 
 export function deleteTutorChat(quizId: string, questionId: string) {
   db.prepare("DELETE FROM tutor_chats WHERE quiz_id = ? AND question_id = ?").run(quizId, questionId);
+}
+
+// ---------- vivas ----------
+
+interface VivaRow {
+  id: string;
+  source: VivaSource;
+  repo_url: string;
+  repo_name: string;
+  branch: string | null;
+  commit_sha: string | null;
+  title: string;
+  status: VivaStatus;
+  error: string | null;
+  config_json: string;
+  brief_json: string | null;
+  messages_json: string;
+  topic_index: number;
+  ended: number;
+  result_json: string | null;
+  model_used: string | null;
+  duration_ms: number | null;
+  created_at: number;
+  started_at: number;
+  completed_at: number | null;
+}
+
+const toViva = (r: VivaRow): VivaRecord => ({
+  id: r.id,
+  source: r.source,
+  repoUrl: r.repo_url,
+  repoName: r.repo_name,
+  branch: r.branch,
+  commit: r.commit_sha,
+  title: r.title,
+  status: r.status,
+  error: r.error,
+  config: JSON.parse(r.config_json),
+  brief: r.brief_json ? JSON.parse(r.brief_json) : null,
+  messages: JSON.parse(r.messages_json),
+  topicIndex: r.topic_index,
+  ended: r.ended === 1,
+  result: r.result_json ? JSON.parse(r.result_json) : null,
+  modelUsed: r.model_used,
+  durationMs: r.duration_ms,
+  createdAt: r.created_at,
+  startedAt: r.started_at,
+  completedAt: r.completed_at,
+});
+
+/** Preparation times out after 15 minutes, so anything older was cut off (e.g. by a server restart). */
+function expireStaleVivas() {
+  db.prepare(
+    `UPDATE vivas SET status = 'error', error = 'Preparation was interrupted (the server may have restarted). Retry to prepare again.'
+     WHERE status = 'preparing' AND started_at < ?`,
+  ).run(Date.now() - STALE_AFTER_MS);
+}
+
+export function listVivas(): VivaRecord[] {
+  expireStaleVivas();
+  return (db.prepare("SELECT * FROM vivas ORDER BY created_at DESC").all() as VivaRow[]).map(toViva);
+}
+
+export function getViva(id: string): VivaRecord | null {
+  expireStaleVivas();
+  const row = db.prepare("SELECT * FROM vivas WHERE id = ?").get(id) as VivaRow | undefined;
+  return row ? toViva(row) : null;
+}
+
+export function insertViva(v: {
+  id: string;
+  source: VivaSource;
+  repoUrl: string;
+  repoName: string;
+  branch: string | null;
+  title: string;
+  config: VivaConfig;
+  createdAt: number;
+}) {
+  db.prepare(
+    `INSERT INTO vivas (id, source, repo_url, repo_name, branch, title, status, config_json, created_at, started_at)
+     VALUES (?, ?, ?, ?, ?, ?, 'preparing', ?, ?, ?)`,
+  ).run(v.id, v.source, v.repoUrl, v.repoName, v.branch, v.title, JSON.stringify(v.config), v.createdAt, v.createdAt);
+}
+
+export function markVivaPreparing(id: string) {
+  db.prepare("UPDATE vivas SET status = 'preparing', error = NULL, started_at = ? WHERE id = ?").run(Date.now(), id);
+}
+
+export function completeVivaPrep(
+  id: string,
+  p: { brief: VivaBrief; branch: string | null; commit: string | null; modelUsed: string | null; durationMs: number },
+) {
+  db.prepare(
+    `UPDATE vivas SET status = 'ready', error = NULL, brief_json = ?, branch = ?, commit_sha = ?, model_used = ?,
+       duration_ms = ?, messages_json = '[]', topic_index = 0, ended = 0, result_json = NULL, completed_at = NULL
+     WHERE id = ?`,
+  ).run(JSON.stringify(p.brief), p.branch, p.commit, p.modelUsed, p.durationMs, id);
+}
+
+export function failViva(id: string, error: string) {
+  db.prepare("UPDATE vivas SET status = 'error', error = ? WHERE id = ?").run(error, id);
+}
+
+export function saveVivaTranscript(id: string, messages: VivaMessage[], topicIndex: number, ended: boolean) {
+  db.prepare("UPDATE vivas SET messages_json = ?, topic_index = ?, ended = ? WHERE id = ?").run(
+    JSON.stringify(messages),
+    topicIndex,
+    ended ? 1 : 0,
+    id,
+  );
+}
+
+export function saveVivaResult(id: string, result: VivaResult) {
+  db.prepare("UPDATE vivas SET result_json = ?, ended = 1, completed_at = ? WHERE id = ?").run(
+    JSON.stringify(result),
+    Date.now(),
+    id,
+  );
+}
+
+/** Clears the conversation and assessment so the viva can be taken again with the same plan. */
+export function resetViva(id: string) {
+  db.prepare(
+    `UPDATE vivas SET messages_json = '[]', topic_index = 0, ended = 0, result_json = NULL, completed_at = NULL
+     WHERE id = ?`,
+  ).run(id);
+}
+
+export function renameViva(id: string, title: string): boolean {
+  return db.prepare("UPDATE vivas SET title = ? WHERE id = ?").run(title, id).changes > 0;
+}
+
+export function deleteViva(id: string) {
+  db.prepare("DELETE FROM vivas WHERE id = ?").run(id);
 }

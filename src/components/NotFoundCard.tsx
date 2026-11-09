@@ -5,7 +5,7 @@ import { EmptyState, buttonClass } from "./ui";
 export function NotFoundCard() {
   return (
     <EmptyState
-      icon={<SearchX className="size-5" />}
+      icon={<SearchX className="size-6" />}
       title="Not found"
       action={
         <Link href="/" className={buttonClass("primary")}>

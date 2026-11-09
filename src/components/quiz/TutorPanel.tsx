@@ -4,7 +4,9 @@ import { useEffect, useRef, useState } from "react";
 import { ArrowUp, Lightbulb, MessageCircleQuestion, RotateCcw, SquarePen, Square, X } from "lucide-react";
 import type { Answer, Question, TutorMessage } from "@/lib/types";
 import { useConfirm } from "../Dialog";
-import { Spinner, cx } from "../ui";
+import { ThoughtCloud } from "../Logo";
+import { cx } from "../ui";
+import { Reply } from "../Reply";
 import { RichText } from "./RichText";
 
 export interface Message extends TutorMessage {
@@ -222,17 +224,19 @@ export function TutorPanel({
           onClose();
         }
       }}
-      className="animate-slide-in fixed inset-y-0 right-0 z-40 flex w-full flex-col border-l border-zinc-200 bg-white shadow-2xl sm:w-[26rem] lg:w-(--tutor-w) lg:shadow-none dark:border-zinc-800 dark:bg-zinc-950"
+      className="animate-slide-in fixed inset-y-0 right-0 z-40 flex w-full flex-col border-l border-line bg-background shadow-2xl sm:w-[26rem] lg:w-(--tutor-w) lg:shadow-none"
     >
       <ResizeHandle />
       {confirmDialog}
-      <header className="flex items-start gap-3 border-b border-zinc-200 px-4 py-3 dark:border-zinc-800">
-        <span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-lg bg-brand-50 text-brand-600 dark:bg-brand-950 dark:text-brand-300">
+      <header className="flex min-h-14 items-start gap-3 border-b border-line px-4 py-3">
+        <span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-md bg-foreground text-background">
           <MessageCircleQuestion className="size-4" aria-hidden />
         </span>
         <div className="min-w-0 flex-1">
-          <h2 className="text-sm font-semibold">Ask Claude · Question {target.number}</h2>
-          <p className="line-clamp-2 text-xs text-muted">
+          <h2 className="text-sm font-semibold">
+            Ask Claude <span className="font-mono text-xs font-medium text-subtle">· Q{target.number}</span>
+          </h2>
+          <p className="mt-0.5 line-clamp-2 text-xs leading-relaxed text-muted">
             <RichText text={target.question.question.replaceAll("[[BLANK]]", "____")} />
           </p>
         </div>
@@ -243,7 +247,7 @@ export function TutorPanel({
             disabled={busy}
             aria-label="New chat"
             title="New chat"
-            className="grid size-8 shrink-0 place-items-center rounded-lg text-subtle transition-colors hover:bg-zinc-100 hover:text-zinc-900 disabled:opacity-40 pointer-coarse:size-10 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+            className="grid size-8 shrink-0 place-items-center rounded-md text-subtle transition-colors hover:bg-zinc-100 hover:text-foreground disabled:opacity-40 pointer-coarse:size-10 dark:hover:bg-zinc-900"
           >
             <SquarePen className="size-4" />
           </button>
@@ -253,18 +257,19 @@ export function TutorPanel({
           onClick={onClose}
           aria-label="Close"
           title="Close (Esc)"
-          className="grid size-8 shrink-0 place-items-center rounded-lg text-subtle transition-colors hover:bg-zinc-100 hover:text-zinc-900 pointer-coarse:size-10 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+          className="grid size-8 shrink-0 place-items-center rounded-md text-subtle transition-colors hover:bg-zinc-100 hover:text-foreground pointer-coarse:size-10 dark:hover:bg-zinc-900"
         >
           <X className="size-4" />
         </button>
       </header>
 
-      <div ref={listRef} className="flex-1 overflow-y-auto px-4 py-4" aria-live="polite" aria-busy={busy}>
-        <div className="mx-auto w-full max-w-2xl space-y-4">
+      <div ref={listRef} className="flex-1 overflow-y-auto px-4 py-5" aria-live="polite" aria-busy={busy}>
+        <div className="mx-auto w-full max-w-2xl space-y-5">
           {messages.length === 0 ? (
-            <div className="space-y-3 pt-2">
-              <p className="text-sm text-muted">
-                Stuck or unsure? Ask anything about this question
+            <div className="space-y-4 pt-2">
+              <p className="font-display text-xl leading-snug">Stuck or unsure?</p>
+              <p className="-mt-2 text-sm text-muted">
+                Ask anything about this question
                 {target.question.artifact ? ", including the code, equations, chart or table that comes with it" : ""}.
               </p>
               <div className="flex flex-col items-start gap-2">
@@ -273,7 +278,7 @@ export function TutorPanel({
                     key={s}
                     type="button"
                     onClick={() => send(s)}
-                    className="rounded-full border border-zinc-200 px-3 py-1.5 text-left text-sm transition-colors hover:border-brand-300 hover:bg-brand-50 hover:text-brand-800 pointer-coarse:py-2 dark:border-zinc-800 dark:hover:border-brand-800 dark:hover:bg-brand-950/60 dark:hover:text-brand-200"
+                    className="inline-flex items-center gap-2 rounded-full border border-line px-3.5 py-1.5 text-left text-sm text-muted transition-colors duration-150 hover:border-foreground hover:text-foreground pointer-coarse:py-2.5"
                   >
                     {s}
                   </button>
@@ -283,7 +288,7 @@ export function TutorPanel({
           ) : (
             messages.map((m, i) =>
               m.role === "user" ? (
-                <div key={i} className="ml-auto w-fit max-w-[85%] rounded-2xl rounded-br-md bg-brand-600 px-3.5 py-2 text-sm break-words whitespace-pre-wrap text-white">
+                <div key={i} className="animate-fade-up ml-auto w-fit max-w-[85%] rounded-2xl rounded-br-sm bg-zinc-100 px-4 py-2.5 text-sm leading-relaxed break-words whitespace-pre-wrap dark:bg-zinc-900">
                   {m.content}
                 </div>
               ) : (
@@ -292,14 +297,15 @@ export function TutorPanel({
                   className={cx(
                     "text-sm leading-relaxed",
                     m.stopped && "text-subtle italic",
-                    m.error && !m.stopped && "rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200",
+                    m.error && !m.stopped && "rounded-md border border-red-600/25 px-3.5 py-2.5 text-red-700 dark:border-red-400/25 dark:text-red-400",
                   )}
                 >
                   {m.content ? (
                     <Reply text={m.content} />
                   ) : (
-                    <span className="inline-flex items-center gap-2 text-muted">
-                      <Spinner className="size-3.5" /> Claude is thinking…
+                    <span className="inline-flex items-center gap-2.5 text-muted">
+                      <TypingDots />
+                      <span className="text-shimmer">Claude is thinking…</span>
                     </span>
                   )}
                 </div>
@@ -310,7 +316,7 @@ export function TutorPanel({
             <button
               type="button"
               onClick={() => send(lastQuestion, messages.slice(0, -2))}
-              className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-700 hover:underline dark:text-brand-300"
+              className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-sm font-medium underline-offset-4 transition-colors hover:underline"
             >
               <RotateCcw className="size-3.5" aria-hidden /> Try again
             </button>
@@ -330,10 +336,10 @@ export function TutorPanel({
           e.preventDefault();
           send(draft);
         }}
-        className="border-t border-zinc-200 p-3 dark:border-zinc-800"
+        className="border-t border-line p-3"
       >
         <div className="mx-auto w-full max-w-2xl">
-          <div className="flex items-end gap-2 rounded-xl border border-zinc-300 bg-white p-1.5 transition focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-500/20 dark:border-zinc-700 dark:bg-zinc-900">
+          <div className="flex items-end gap-2 rounded-xl border border-line-strong bg-surface p-1.5 transition-[border-color,box-shadow] duration-150 focus-within:border-foreground focus-within:ring-3 focus-within:ring-foreground/10">
             <textarea
               ref={inputRef}
               value={draft}
@@ -355,7 +361,7 @@ export function TutorPanel({
                 onClick={() => controllers.current.get(qid)?.abort()}
                 aria-label="Stop"
                 title="Stop"
-                className="grid size-9 shrink-0 place-items-center rounded-lg bg-zinc-900 text-white transition-colors hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
+                className="grid size-9 shrink-0 place-items-center rounded-lg bg-foreground text-background transition-opacity hover:opacity-85"
               >
                 <Square className="size-3.5 fill-current" />
               </button>
@@ -365,7 +371,7 @@ export function TutorPanel({
                 disabled={!draft.trim()}
                 aria-label="Send"
                 title="Send (Enter)"
-                className="grid size-9 shrink-0 place-items-center rounded-lg bg-brand-600 text-white transition-colors hover:bg-brand-700 disabled:opacity-40"
+                className="grid size-9 shrink-0 place-items-center rounded-lg bg-foreground text-background transition-[opacity,transform] hover:opacity-85 active:scale-95 disabled:opacity-25"
               >
                 <ArrowUp className="size-4" />
               </button>
@@ -432,30 +438,15 @@ function ResizeHandle() {
     >
       <span
         className={cx(
-          "absolute inset-y-0 left-1/2 w-0.5 -translate-x-1/2 transition-colors group-hover:bg-brand-400 group-focus-visible:bg-brand-500",
-          dragging && "bg-brand-500",
+          "absolute inset-y-0 left-1/2 w-0.5 -translate-x-1/2 transition-colors group-hover:bg-line-strong group-focus-visible:bg-foreground",
+          dragging && "bg-foreground",
         )}
       />
     </div>
   );
 }
 
-/** Claude's reply: paragraphs with maths rendered, and ``` fenced code as blocks. */
-function Reply({ text }: { text: string }) {
-  const parts = text.split(/```[^\n]*\n?/);
-  return (
-    <div className="space-y-2">
-      {parts.map((part, i) =>
-        i % 2 === 1 ? (
-          <pre key={i} className="overflow-x-auto rounded-lg bg-zinc-900 px-3 py-2 font-mono text-xs leading-relaxed text-zinc-100">
-            {part.replace(/\n$/, "")}
-          </pre>
-        ) : part.trim() ? (
-          <p key={i} className="whitespace-pre-wrap">
-            <RichText text={part.trim()} />
-          </p>
-        ) : null,
-      )}
-    </div>
-  );
+/** The Recall thought cloud, its bubbles rising in turn, while a reply is on its way. */
+export function TypingDots() {
+  return <ThoughtCloud thinking className="size-5 shrink-0 text-foreground" />;
 }

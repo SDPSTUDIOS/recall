@@ -4,11 +4,14 @@ import { ArrowLeft } from "lucide-react";
 
 export const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(" ");
 
-export function Card({ className, ...props }: ComponentProps<"div">) {
+/** A flat panel with a hairline border. `interactive` adds the hover state for linked cards. */
+export function Card({ className, interactive, ...props }: ComponentProps<"div"> & { interactive?: boolean }) {
   return (
     <div
       className={cx(
-        "rounded-xl border border-zinc-200/80 bg-white shadow-[0_1px_2px_rgb(0_0_0/0.04)] dark:border-zinc-800 dark:bg-zinc-900",
+        "surface rounded-xl",
+        interactive &&
+          "transition-[border-color,background-color] duration-200 hover:border-line-strong hover:bg-sunken",
         className,
       )}
       {...props}
@@ -17,22 +20,20 @@ export function Card({ className, ...props }: ComponentProps<"div">) {
 }
 
 const buttonVariants = {
-  // Hovers go darker: white on the 500 shades falls below 4.5:1.
-  primary:
-    "bg-brand-600 text-white hover:bg-brand-700 disabled:bg-brand-600/50 shadow-sm shadow-brand-600/20",
+  // Solid ink: black on light, white on dark.
+  primary: "bg-foreground text-background hover:opacity-85 disabled:opacity-40 disabled:hover:opacity-40",
   secondary:
-    "border border-zinc-300 bg-white text-zinc-800 hover:border-zinc-400 hover:bg-zinc-50 disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:border-zinc-600 dark:hover:bg-zinc-800",
-  ghost: "text-zinc-600 hover:bg-zinc-100 disabled:opacity-50 dark:text-zinc-300 dark:hover:bg-zinc-800",
-  danger:
-    "text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/50",
-  "danger-solid": "bg-red-600 text-white hover:bg-red-700 disabled:bg-red-600/50 shadow-sm",
+    "border border-line-strong bg-surface text-foreground hover:bg-zinc-100 disabled:opacity-50 dark:hover:bg-zinc-900",
+  ghost: "text-muted hover:bg-zinc-100 hover:text-foreground disabled:opacity-50 dark:hover:bg-zinc-900",
+  danger: "text-red-600 hover:bg-red-500/10 dark:text-red-400",
+  "danger-solid": "bg-red-600 text-white hover:bg-red-700 disabled:bg-red-600/50",
 };
 
 export type ButtonVariant = keyof typeof buttonVariants;
 
 export function buttonClass(variant: ButtonVariant = "primary", className?: string) {
   return cx(
-    "inline-flex min-h-9 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-[color,background-color,border-color,transform] duration-150 active:scale-[0.97] disabled:cursor-not-allowed disabled:active:scale-100 pointer-coarse:min-h-11",
+    "inline-flex min-h-9 select-none items-center justify-center gap-2 whitespace-nowrap rounded-md px-3.5 py-2 text-sm font-medium transition-[color,background-color,border-color,opacity,transform] duration-150 ease-(--ease-out-quart) active:scale-[0.98] disabled:cursor-not-allowed disabled:active:scale-100 pointer-coarse:min-h-11",
     buttonVariants[variant],
     className,
   );
@@ -49,23 +50,25 @@ export function Button({
 
 export type Tone = "zinc" | "brand" | "green" | "amber" | "red";
 
+/* Neutral badges are outlined; "brand" is solid ink. Colour only for grading states. */
+const BADGE_TONES: Record<Tone, string> = {
+  zinc: "border-line-strong text-muted",
+  brand: "border-transparent bg-foreground text-background",
+  green: "border-emerald-600/25 text-emerald-700 dark:border-emerald-400/25 dark:text-emerald-400",
+  amber: "border-amber-600/30 text-amber-700 dark:border-amber-400/25 dark:text-amber-400",
+  red: "border-red-600/25 text-red-700 dark:border-red-400/25 dark:text-red-400",
+};
+
 export function Badge({
   tone = "zinc",
   className,
   ...props
 }: ComponentProps<"span"> & { tone?: Tone }) {
-  const tones = {
-    zinc: "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300",
-    brand: "bg-brand-50 text-brand-700 dark:bg-brand-950 dark:text-brand-300",
-    green: "bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300",
-    amber: "bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300",
-    red: "bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300",
-  };
   return (
     <span
       className={cx(
-        "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium",
-        tones[tone],
+        "inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-2 py-px text-xs font-medium",
+        BADGE_TONES[tone],
         className,
       )}
       {...props}
@@ -76,6 +79,12 @@ export function Badge({
 /** Tone for a score as a fraction (0-1). */
 export const scoreTone = (fraction: number): Tone =>
   fraction >= 0.8 ? "green" : fraction >= 0.5 ? "amber" : "red";
+
+/**
+ * Stroke/text colour class for a score, for rings and bars. Scores are drawn in
+ * ink, and the number beside them carries the meaning.
+ */
+export const scoreColor = (fraction: number) => (fraction > 0 ? "text-foreground" : "text-subtle");
 
 /**
  * A segmented control. Each option is a toggle button (aria-pressed) in a
@@ -98,7 +107,7 @@ export function ToggleGroup<T extends string>({
     <div
       role="group"
       aria-label={label}
-      className="inline-flex rounded-lg border border-zinc-200 bg-white p-0.5 text-sm dark:border-zinc-800 dark:bg-zinc-900"
+      className="inline-flex flex-wrap gap-0.5 rounded-lg border border-line p-0.5 text-sm"
     >
       {options.map((o) => {
         const on = value === o.value;
@@ -111,11 +120,9 @@ export function ToggleGroup<T extends string>({
             title={o.title ?? o.aria}
             onClick={() => onChange(o.value)}
             className={cx(
-              "inline-flex items-center justify-center rounded-md font-medium transition-colors",
+              "inline-flex items-center justify-center rounded-md font-medium transition-[color,background-color] duration-150",
               size === "sm" ? "h-7 min-w-7 px-2 pointer-coarse:h-10 pointer-coarse:min-w-10" : "h-8 px-3 pointer-coarse:h-10",
-              on
-                ? "bg-brand-600 text-white shadow-sm"
-                : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-100",
+              on ? "bg-foreground text-background" : "text-muted hover:bg-zinc-100 hover:text-foreground dark:hover:bg-zinc-900",
             )}
           >
             {o.label}
@@ -127,7 +134,7 @@ export function ToggleGroup<T extends string>({
 }
 
 export const inputClass =
-  "w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm outline-none transition placeholder:text-zinc-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-zinc-700 dark:bg-zinc-950";
+  "w-full rounded-md border border-line-strong bg-surface px-3 py-2.5 text-sm outline-none transition-[border-color,box-shadow] duration-150 placeholder:text-subtle hover:border-zinc-400 focus:border-foreground focus:ring-3 focus:ring-foreground/10 dark:hover:border-zinc-600";
 
 export function Spinner({ className }: { className?: string }) {
   return (
@@ -135,35 +142,119 @@ export function Spinner({ className }: { className?: string }) {
       role="status"
       aria-label="Loading"
       className={cx(
-        "inline-block size-4 animate-spin rounded-full border-2 border-current border-r-transparent",
+        "inline-block size-4 animate-spin rounded-full border-[1.5px] border-current border-r-transparent",
         className,
       )}
     />
   );
 }
 
+/** Skeleton shown while a page's data streams in. */
 export function PageLoading() {
   return (
-    <div className="flex justify-center py-20 text-subtle">
-      <Spinner className="size-6" />
+    <div className="space-y-4" role="status" aria-label="Loading">
+      <div className="h-8 w-56 max-w-full animate-pulse rounded-md bg-zinc-100 dark:bg-zinc-900" />
+      <div className="h-4 w-96 max-w-full animate-pulse rounded bg-zinc-100 dark:bg-zinc-900" />
+      <div className="grid gap-3 pt-6 sm:grid-cols-3">
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="h-28 animate-pulse rounded-xl border border-line bg-sunken" />
+        ))}
+      </div>
     </div>
   );
 }
 
-export function Kbd({ children }: { children: ReactNode }) {
+export function Kbd({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <kbd className="inline-grid min-w-5 place-items-center rounded border border-zinc-300 bg-zinc-50 px-1 font-mono text-[11px] leading-4 text-zinc-600 shadow-[0_1px_0] shadow-zinc-300 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:shadow-zinc-700">
+    <kbd
+      className={cx(
+        "inline-grid h-5 min-w-5 place-items-center rounded border border-line-strong px-1 font-mono text-[11px] leading-none text-subtle",
+        className,
+      )}
+    >
       {children}
     </kbd>
   );
 }
 
-export function SectionTitle({ children, action }: { children: ReactNode; action?: ReactNode }) {
+/** Small label above a heading or section. */
+export function Eyebrow({ children, className }: { children: ReactNode; className?: string }) {
+  return <div className={cx("font-mono text-xs text-subtle", className)}>{children}</div>;
+}
+
+export function SectionTitle({ children, action, count }: { children: ReactNode; action?: ReactNode; count?: number }) {
   return (
-    <div className="flex min-h-8 items-center justify-between gap-3">
-      <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">{children}</h2>
+    <div className="flex min-h-9 items-center justify-between gap-3 border-b border-line pb-3">
+      <h2 className="flex items-baseline gap-2 text-sm font-semibold">
+        {children}
+        {count !== undefined && <span className="font-mono text-xs font-normal tabular-nums text-subtle">{count}</span>}
+      </h2>
       {action}
     </div>
+  );
+}
+
+/** The heading block at the top of a page: an eyebrow, a title, a description and actions. */
+export function PageHeader({
+  eyebrow,
+  title,
+  description,
+  actions,
+  back,
+  icon,
+  meta,
+}: {
+  eyebrow?: ReactNode;
+  title: ReactNode;
+  description?: ReactNode;
+  actions?: ReactNode;
+  back?: { href: string; label: string };
+  icon?: ReactNode;
+  meta?: ReactNode;
+}) {
+  return (
+    <header className="animate-fade-up">
+      {back && <BackLink href={back.href}>{back.label}</BackLink>}
+      <div className={cx("flex flex-wrap items-end justify-between gap-x-6 gap-y-4", back && "mt-6")}>
+        <div className="flex min-w-[min(100%,22rem)] flex-1 gap-4">
+          {icon}
+          <div className="min-w-0 flex-1">
+            {eyebrow && <Eyebrow className="mb-2">{eyebrow}</Eyebrow>}
+            {typeof title === "string" ? (
+              <h1 className="font-display text-3xl leading-[1.1] sm:text-4xl">{title}</h1>
+            ) : (
+              title
+            )}
+            {description && <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-muted">{description}</p>}
+            {meta && <div className="mt-4">{meta}</div>}
+          </div>
+        </div>
+        {actions && <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>}
+      </div>
+    </header>
+  );
+}
+
+/** A square holding an icon, used beside titles and in list rows. Always neutral. */
+export function IconTile({
+  children,
+  size = "md",
+  className,
+}: {
+  children: ReactNode;
+  /** Kept for callers; every tone renders the same neutral tile. */
+  tone?: "brand" | "rose" | "zinc" | "amber" | "green";
+  size?: "sm" | "md" | "lg";
+  className?: string;
+}) {
+  const sizes = { sm: "size-9 rounded-md", md: "size-10 rounded-lg", lg: "size-12 rounded-lg" };
+  return (
+    <span
+      aria-hidden
+      className={cx("grid shrink-0 place-items-center border border-line bg-sunken text-foreground", sizes[size], className)}
+    >
+      {children}
+    </span>
   );
 }
 
@@ -171,9 +262,10 @@ export function BackLink({ href, children }: { href: string; children: ReactNode
   return (
     <Link
       href={href}
-      className="group -ml-1 inline-flex min-h-8 max-w-full items-center gap-1 rounded-md px-1 text-sm text-muted transition-colors hover:text-zinc-900 dark:hover:text-zinc-100"
+      className="group -ml-1 inline-flex min-h-8 max-w-full items-center gap-1.5 rounded-md px-1 text-sm text-muted transition-colors hover:text-foreground"
     >
-      <ArrowLeft className="size-4 shrink-0 transition-transform group-hover:-translate-x-0.5" /> <span className="truncate">{children}</span>
+      <ArrowLeft className="size-4 shrink-0 transition-transform duration-200 group-hover:-translate-x-0.5" />{" "}
+      <span className="truncate">{children}</span>
     </Link>
   );
 }
@@ -190,16 +282,16 @@ export function EmptyState({
   action?: ReactNode;
 }) {
   return (
-    <Card className="flex flex-col items-center gap-3 px-6 py-10 text-center">
-      <span className="grid size-12 place-items-center rounded-2xl bg-brand-50 text-brand-600 dark:bg-brand-950 dark:text-brand-300">
+    <div className="flex flex-col items-center gap-4 rounded-xl border border-dashed border-line-strong px-6 py-16 text-center">
+      <span className="grid size-11 place-items-center rounded-lg border border-line bg-surface text-foreground">
         {icon}
       </span>
       <div>
-        <div className="font-medium">{title}</div>
-        {children && <p className="mx-auto mt-1 max-w-sm text-sm text-muted">{children}</p>}
+        <div className="text-base font-semibold tracking-tight">{title}</div>
+        {children && <p className="mx-auto mt-1.5 max-w-sm text-sm leading-relaxed text-muted">{children}</p>}
       </div>
-      {action}
-    </Card>
+      {action && <div className="pt-1">{action}</div>}
+    </div>
   );
 }
 
@@ -207,9 +299,21 @@ export function ErrorText({ children }: { children: ReactNode }) {
   return (
     <p
       role="alert"
-      className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/50 dark:text-red-300"
+      className="animate-fade-up rounded-md border border-red-600/25 bg-red-500/[0.05] px-3 py-2.5 text-sm text-red-700 dark:border-red-400/25 dark:text-red-400"
     >
       {children}
     </p>
+  );
+}
+
+/** A thin progress meter. `value` is a fraction from 0 to 1. */
+export function Meter({ value, className, barClassName }: { value: number; className?: string; barClassName?: string }) {
+  return (
+    <div className={cx("h-1 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-900", className)}>
+      <div
+        className={cx("animate-grow-x h-full rounded-full", barClassName ?? "bg-foreground")}
+        style={{ width: `${Math.max(0, Math.min(1, value)) * 100}%` }}
+      />
+    </div>
   );
 }

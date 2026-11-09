@@ -32,6 +32,7 @@ export function DeleteButton({
           if (!(await confirm({ title, body, confirmLabel: label, variant: "danger-solid" }))) return;
           setBusy(true);
           await fetch(url, { method: "DELETE" });
+          window.dispatchEvent(new Event("recall:library"));
           if (redirectTo) router.push(redirectTo);
           router.refresh();
           // Routes stay mounted after navigation, so reset for when the user comes back.

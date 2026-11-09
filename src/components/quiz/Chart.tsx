@@ -291,14 +291,14 @@ export function Chart({ chart, title }: { chart: ChartSpec; title?: string }) {
               transform: `translate(${hover.px > W * 0.65 ? "calc(-100% - 12px)" : "12px"}, -50%)`,
             }}
           >
-            <div className="mb-1 font-semibold text-zinc-800 dark:text-zinc-100">{hover.heading}</div>
+            <div className="mb-1 font-semibold text-foreground">{hover.heading}</div>
             {hover.rows.map((r, i) => (
-              <div key={i} className="flex items-center gap-2 text-zinc-600 dark:text-zinc-300">
+              <div key={i} className="flex items-center gap-2 text-muted">
                 <svg width="10" height="10" aria-hidden className="shrink-0 overflow-visible">
                   <Marker shape={r.shape} x={5} y={5} color={r.color} />
                 </svg>
                 <span className="flex-1">{r.name}</span>
-                <span className="font-medium tabular-nums text-zinc-900 dark:text-zinc-50">{r.value}</span>
+                <span className="font-medium tabular-nums text-foreground">{r.value}</span>
               </div>
             ))}
           </div>
@@ -332,7 +332,7 @@ function DataTable({ chart }: { chart: ChartSpec }) {
   }
   return (
     <details className="mt-2 text-xs">
-      <summary className="cursor-pointer px-1 font-medium text-muted hover:text-zinc-800 dark:hover:text-zinc-200">Show data</summary>
+      <summary className="cursor-pointer px-1 font-medium text-muted hover:text-foreground">Show data</summary>
       <div className="mt-2 max-h-64 overflow-auto rounded-md border border-zinc-200 dark:border-zinc-800">
         <table className="w-full tabular-nums">
           <thead className="sticky top-0 bg-zinc-50 dark:bg-zinc-800">

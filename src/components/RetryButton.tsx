@@ -5,7 +5,7 @@ import { useState } from "react";
 import { RotateCcw } from "lucide-react";
 import { Button, Spinner } from "./ui";
 
-export function RetryButton({ quizId }: { quizId: string }) {
+export function RetryButton({ url, label = "Retry generation" }: { url: string; label?: string }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   return (
@@ -13,12 +13,12 @@ export function RetryButton({ quizId }: { quizId: string }) {
       disabled={busy}
       onClick={async () => {
         setBusy(true);
-        await fetch(`/api/quizzes/${quizId}/retry`, { method: "POST" });
+        await fetch(url, { method: "POST" });
         router.refresh();
         setBusy(false);
       }}
     >
-      {busy ? <Spinner /> : <RotateCcw className="size-4" />} Retry generation
+      {busy ? <Spinner /> : <RotateCcw className="size-4" />} {label}
     </Button>
   );
 }

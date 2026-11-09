@@ -41,6 +41,7 @@ export function EditableTitle({
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? "Could not rename");
       setEditing(false);
+      window.dispatchEvent(new Event("recall:library"));
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -59,7 +60,7 @@ export function EditableTitle({
             setDraft(value);
             setEditing(true);
           }}
-          className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-md text-subtle opacity-100 transition hover:bg-zinc-100 hover:text-zinc-700 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+          className="mt-[0.2em] grid size-8 shrink-0 place-items-center rounded-lg font-sans text-subtle opacity-100 transition hover:bg-zinc-100 hover:text-zinc-700 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100 dark:hover:bg-zinc-900 dark:hover:text-zinc-200"
           aria-label="Rename"
           title="Rename"
         >
@@ -71,7 +72,7 @@ export function EditableTitle({
 
   return (
     <form
-      className="w-full max-w-xl"
+      className="w-full max-w-2xl"
       onSubmit={(e) => {
         e.preventDefault();
         save();
@@ -91,14 +92,14 @@ export function EditableTitle({
             }
           }}
           className={cx(
-            "min-w-0 flex-1 rounded-lg border border-brand-400 bg-white px-2 py-1 outline-none ring-2 ring-brand-500/20 dark:bg-zinc-950",
+            "min-w-0 flex-1 rounded-md border border-foreground bg-surface px-3 py-1 outline-none ring-3 ring-foreground/10",
             className,
           )}
         />
         <button
           type="submit"
           disabled={busy}
-          className="grid size-8 place-items-center rounded-md text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/50"
+          className="grid size-9 place-items-center rounded-lg text-emerald-600 hover:bg-emerald-500/10 dark:text-emerald-400"
           aria-label="Save name"
         >
           {busy ? <Spinner /> : <Check className="size-4" />}
@@ -109,7 +110,7 @@ export function EditableTitle({
             setEditing(false);
             setDraft(value);
           }}
-          className="grid size-8 place-items-center rounded-md text-muted hover:bg-zinc-100 dark:hover:bg-zinc-800"
+          className="grid size-9 place-items-center rounded-lg text-muted hover:bg-sunken"
           aria-label="Cancel"
         >
           <X className="size-4" />

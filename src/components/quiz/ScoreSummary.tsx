@@ -1,9 +1,10 @@
 "use client";
 
-import { RotateCcw } from "lucide-react";
+import { Check, CircleDashed, Minus, RotateCcw, X } from "lucide-react";
+import type { ReactNode } from "react";
 import { pct } from "@/lib/format";
 import { QUESTION_TYPES, type AttemptRecord, type Question } from "@/lib/types";
-import { Button, Card, cx } from "../ui";
+import { Button, Meter } from "../ui";
 import { fmt } from "./QuestionCard";
 
 const verdict = (p: number) =>
@@ -54,46 +55,29 @@ export function ScoreSummary({
     skipped: attempt.results.filter((r) => r.status === "unanswered").length,
   };
 
-  const ring = percent >= 80 ? "text-emerald-500" : percent >= 50 ? "text-amber-500" : "text-red-500";
-  const c = 2 * Math.PI * 52;
-
   return (
-    <Card className="animate-fade-up overflow-hidden">
-      <div className="flex flex-col gap-6 p-5 sm:flex-row sm:items-center sm:p-6">
-        <div className="relative mx-auto grid size-32 shrink-0 place-items-center sm:mx-0">
-          <svg viewBox="0 0 120 120" className="absolute inset-0 -rotate-90">
-            <circle cx="60" cy="60" r="52" fill="none" strokeWidth="10" className="stroke-zinc-100 dark:stroke-zinc-800" />
-            <circle
-              cx="60"
-              cy="60"
-              r="52"
-              fill="none"
-              strokeWidth="10"
-              strokeLinecap="round"
-              stroke="currentColor"
-              className={cx(ring, "animate-ring-draw")}
-              strokeDasharray={`${(percent / 100) * c} ${c}`}
-            />
-          </svg>
-          <div className="text-center">
-            <div className="text-3xl font-bold tabular-nums tracking-tight">{percent}%</div>
-            <div className="text-xs text-muted">
-              {fmt(attempt.score)} / {fmt(attempt.maxScore)}
-            </div>
+    <section aria-label="Your result" className="animate-fade-up overflow-hidden rounded-xl border border-line">
+      <div className="grid gap-8 p-6 sm:p-8 md:grid-cols-[auto_1fr] md:gap-12">
+        <div>
+          <div className="font-mono text-xs text-subtle">Your result</div>
+          <div className="font-display mt-2 text-7xl leading-none tabular-nums tracking-[-0.05em] sm:text-8xl">
+            {percent}
+            <span className="text-4xl text-subtle sm:text-5xl">%</span>
+          </div>
+          <div className="mt-3 text-lg font-medium">{verdict(percent)}</div>
+          <div className="mt-0.5 font-mono text-xs tabular-nums text-subtle">
+            {fmt(attempt.score)} of {fmt(attempt.maxScore)} marks
           </div>
         </div>
 
-        <div className="min-w-0 flex-1 space-y-4">
-          <div>
-            <h2 className="text-xl font-bold tracking-tight">{verdict(percent)}</h2>
-            <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm">
-              <Count color="bg-emerald-500" n={counts.correct} label="correct" />
-              {counts.partial > 0 && <Count color="bg-amber-500" n={counts.partial} label="partly correct" />}
-              <Count color="bg-red-500" n={counts.wrong} label="incorrect" />
-              {counts.skipped > 0 && <Count color="bg-zinc-400" n={counts.skipped} label="skipped" />}
-            </div>
-          </div>
-          <div className="grid gap-x-6 gap-y-2 sm:grid-cols-2">
+        <div className="min-w-0 space-y-6 md:pt-6">
+          <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-line bg-line sm:grid-cols-4">
+            <Count icon={<Check className="size-3.5 text-emerald-600 dark:text-emerald-400" strokeWidth={2.5} />} n={counts.correct} label="Correct" />
+            <Count icon={<Minus className="size-3.5 text-amber-600 dark:text-amber-400" strokeWidth={2.5} />} n={counts.partial} label="Partly" />
+            <Count icon={<X className="size-3.5 text-red-600 dark:text-red-400" strokeWidth={2.5} />} n={counts.wrong} label="Incorrect" />
+            <Count icon={<CircleDashed className="size-3.5 text-subtle" />} n={counts.skipped} label="Skipped" />
+          </dl>
+          <div className="grid gap-x-8 gap-y-4 sm:grid-cols-2">
             {byType.map((t) => (
               <Bar key={t.label} label={t.label} score={t.score} max={t.max} />
             ))}
@@ -102,9 +86,9 @@ export function ScoreSummary({
       </div>
 
       {weakTopics.length > 0 && (
-        <div className="border-t border-zinc-200 px-5 py-4 sm:px-6 dark:border-zinc-800">
-          <h3 className="mb-2 text-sm font-semibold">Topics to review</h3>
-          <div className="grid gap-x-6 gap-y-2 sm:grid-cols-2">
+        <div className="border-t border-line px-6 py-6 sm:px-8">
+          <h3 className="mb-4 text-sm font-semibold">Topics to review</h3>
+          <div className="grid gap-x-8 gap-y-4 sm:grid-cols-2">
             {weakTopics.map((t) => (
               <Bar key={t.label} label={t.label} score={t.score} max={t.max} />
             ))}
@@ -112,40 +96,39 @@ export function ScoreSummary({
         </div>
       )}
 
-      <div className="flex flex-wrap gap-2 border-t border-zinc-200 bg-zinc-50 px-5 py-3 sm:px-6 dark:border-zinc-800 dark:bg-zinc-900/60">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line bg-sunken px-6 py-4 sm:px-8">
+        <p className="text-[13px] text-muted">Review each answer below, or ask Claude about any question.</p>
         <Button onClick={onRetake}>
           <RotateCcw className="size-4" /> Retake
         </Button>
       </div>
-    </Card>
+    </section>
   );
 }
 
-function Count({ color, n, label }: { color: string; n: number; label: string }) {
+function Count({ icon, n, label }: { icon: ReactNode; n: number; label: string }) {
   return (
-    <span className="inline-flex items-center gap-1.5 text-zinc-600 dark:text-zinc-400">
-      <span className={cx("size-2 rounded-full", color)} />
-      <span className="font-medium tabular-nums text-zinc-800 dark:text-zinc-200">{n}</span> {label}
-    </span>
+    <div className="bg-surface px-4 py-3">
+      <dt className="flex items-center gap-1.5 text-xs text-subtle">
+        <span aria-hidden>{icon}</span>
+        {label}
+      </dt>
+      <dd className="mt-1 font-mono text-xl font-medium tabular-nums">{n}</dd>
+    </div>
   );
 }
 
 function Bar({ label, score, max }: { label: string; score: number; max: number }) {
   const p = pct(score, max);
   return (
-    <div className="space-y-1">
-      <div className="flex justify-between gap-3 text-xs">
-        <span className="truncate text-zinc-600 dark:text-zinc-300">{label}</span>
-        <span className="shrink-0 tabular-nums text-muted">
+    <div className="space-y-2">
+      <div className="flex justify-between gap-3 text-[13px]">
+        <span className="truncate">{label}</span>
+        <span className="shrink-0 font-mono tabular-nums text-subtle">
           {fmt(score)}/{fmt(max)}
         </span>
       </div>
-      <div className="h-1.5 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800">
-        <div
-          className={cx("h-full rounded-full", p >= 80 ? "bg-emerald-500" : p >= 50 ? "bg-amber-500" : "bg-red-500")}
-          style={{ width: `${Math.max(p, 2)}%` }}
-        />
-      </div>
+      <Meter value={Math.max(p, 2) / 100} />
     </div>
   );
 }
